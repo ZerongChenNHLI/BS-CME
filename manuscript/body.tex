@@ -1,56 +1,77 @@
+\section{Introduction}\label{sec:intro}
+
+Some treatments are required to work on several targets at once, and the confirmatory trial then has several primary endpoints that must all show an effect. Multivalent vaccines are the clearest case: a quadrivalent meningococcal conjugate vaccine is licensed on serogroup-specific immunogenicity, and success means non-inferiority to the licensed comparator on each of serogroups A, C, W and Y\cite{yang2024,ostergaard2009}. Endpoints of this kind are called co-primary. They are tested by the intersection--union principle, each at the nominal level $\alpha$, with success declared only if every test rejects\cite{berger1982}; no multiplicity adjustment is required, but the type II error accumulates, the power of the conjunction being at most the smallest marginal power and well below it when the endpoints are weakly correlated, and the sample size rises with the number of endpoints\cite{offen2007,chuangstein2007,sozu2010,hamasaki2018}.
+
+When the confirmatory trial is preceded by the selection of one of several candidate doses or formulations, an adaptive seamless phase II/III design can combine the two steps\cite{bauer1994,stallard2003,posch2005,bretz2006,jennison2007,stallard2011}. Stage 1 randomises to all candidates and control, an interim analysis selects one candidate, stage 2 continues with the selected candidate and control, and the final analysis uses the data of both stages. Type I error control despite the data-dependent selection is obtained by a combination test over stages together with a closed test over candidates\cite{marcus1976,bauer1994,hommel2001,posch2005,bretz2006}. Dose optimisation has made this setting topical\cite{fda2024,li2024,liu2026}, and Yang et al\cite{yang2024} have proposed a Bayesian seamless design for co-primary endpoints in which the selection stage applies the co-primary criterion to every candidate and the stage-2 sample size is chosen by predictive power.
+
+With co-primary endpoints the price of the conjunction is paid at the selection stage as well as at the final analysis, and it is paid once for each candidate. Ranking candidates on the co-primary criterion means ranking them on their weakest endpoint, and with the small stage-1 sample sizes typical of a selection stage the weakest endpoint is a noisy statistic that discards the information in the other endpoints. The question of this paper is whether the selection stage can use a different functional of the same endpoints, one that pools the information across them, without compromising the confirmatory claim.
+
+Selecting on an endpoint other than the confirmatory one is established practice in seamless designs: short-term or surrogate endpoints have been used to select treatments that are then confirmed on a long-term endpoint\cite{stallard2010,friede2011,kunz2014}, and progression-free survival has been used to select a subpopulation confirmed on overall survival\cite{jenkins2011}. There the selection endpoint is available earlier, and the error-control argument is that the final test is valid whatever the selection rule. The switch proposed here is of a different kind. Both functionals are computed from the same $K$ binary responses measured on the same subjects: selection uses a pre-specified weighted composite of the components, the weighted responder score of Zaslavsky\cite{zaslavsky2013}, and confirmation uses the conjunctive co-primary criterion. Because the composite and the component success probabilities are all linear functionals of the multinomial vector of cell probabilities over the $2^K$ response patterns, a single Dirichlet--multinomial model\cite{thall1995,yang2024} delivers the posterior of every quantity used in either stage, and the dependence between endpoints is a property of the shared cells rather than an assumption. Selection is Bayesian; confirmation is a frequentist test with the stage-1 data included.
+
+The contribution is as follows. Section~\ref{sec:design} sets out the design and proves (Theorem~\ref{thm:t1e}) that the probability of a false co-primary claim is at most $\alpha$ for every configuration of true effects and for any selection rule, futility rule and stage-2 sample size. The final analysis is a closed test over all dose--endpoint hypotheses with stage-wise $p$-values combined by the inverse-normal rule, computed exactly through a closed-form shortcut, and we show that the more obvious alternative, closing each endpoint separately over doses, does not control the error when different doses fail on different endpoints. Section~\ref{sec:saving} gives the conditions under which the composite reaches a target probability of correct selection with a smaller stage-1 sample than the co-primary criterion, a concordance requirement on the weights and a second-moment bracket for the ratio of stage-1 sizes under parallel dose effects, and identifies the configurations in which the composite is worse. Section~\ref{sec:sim} reports a simulation study calibrated to the meningococcal example, comparing the proposed design with a seamless design that applies the co-primary criterion at both stages, from selection accuracy through the futility rule to the final claim, and Section~\ref{sec:rule} turns the findings into a design rule based on the frontier of claim probability against expected sample size. Section~\ref{sec:disc} discusses limitations and extensions. Proofs are in the Appendix, and R code reproducing every table and figure is provided.
+
 \section{Motivating example}\label{sec:motivation}
 
 Quadrivalent meningococcal conjugate vaccines are licensed on immunogenicity, and the confirmatory standard is a set of serogroup-specific binary endpoints that must all be met. Yang et al\cite{yang2024} describe a trial of a quadrivalent meningococcal tetanus toxoid-conjugate vaccine in which seroresponse for each of serogroups A, C, W and Y was a co-primary endpoint, success requiring non-inferiority to the licensed comparator on all four with a margin of $-10$ percentage points, and report comparator seroresponse rates of $0.425$, $0.497$, $0.448$ and $0.434$. Four binary endpoints in conjunction is exactly the setting in which the type II error of a co-primary analysis inflates and the sample size rises accordingly.
 
-Upstream of such a trial sits a formulation-selection stage. {\O}stergaard et al\cite{ostergaard2009} compared five candidate MenACWY-TT formulations, differing in polysaccharide content and conjugation method, against a licensed ACWY polysaccharide vaccine in two open-label studies of 50 adults aged 18--25 and 125 adolescents aged 15--19, with the percentage of serum bactericidal antibody (rSBA) responders to each of serogroups A, C, W-135 and Y as the immunogenicity endpoints. Responder percentages did not differ from control for any formulation on any serogroup, with one exception: serogroup A was lower after one formulation. The selection problem is therefore $M=5$ candidates and $K=4$ binary components, $2^K=16$ response patterns per subject, and a concurrent control; and its outcome was, in effect, a judgement over four responder rates per formulation made on 25--35 subjects per arm.
+Upstream of such a trial sits a formulation-selection stage. {\O}stergaard et al\cite{ostergaard2009} compared five candidate MenACWY-TT formulations, differing in polysaccharide content and conjugation method, against a licensed ACWY polysaccharide vaccine in two open-label studies of 50 adults aged 18--25 and 125 adolescents aged 15--19, with the percentage of serum bactericidal antibody responders to each of serogroups A, C, W-135 and Y as the immunogenicity endpoints. Responder percentages did not differ from control for any formulation on any serogroup, with one exception: serogroup A was lower after one formulation. The selection problem is therefore $M=5$ candidates and $K=4$ binary components, $2^K=16$ response patterns per subject, and a concurrent control; and its outcome was, in effect, a judgement over four responder rates per formulation made on 25--35 subjects per arm.
 
 Three features of this setting make it the natural home for the design proposed here. First, the components are positively dependent, since they are responses of the same immune system to conjugates of the same carrier, and a better formulation tends to be better on every serogroup; a scalar summary of the four responder rates therefore carries most of the information that distinguishes formulations, and a selection rule that applies the conjunctive criterion to each candidate discards it. Second, the components have a clinically meaningful weighting: serogroup-specific disease burden differs by age and region, so a weighted responder composite of the kind introduced by Zaslavsky\cite{zaslavsky2013} is interpretable and can be fixed from epidemiological data before the trial. Third, the development ran as a small open-label formulation study followed by separate confirmatory trials; a seamless design that randomises the candidates and control in stage 1, selects on the composite, continues the selected formulation and control into stage 2, and confirms on the four co-primary non-inferiority endpoints with the stage-1 data included, is the obvious alternative, and the question the paper answers is what it costs in error control and what it saves in sample size.
 
-The same example supplies the design's principal caveat. The single-serogroup shortfall seen for one formulation is a failure on one component with adequate responses on the other three, and a composite that averages the four responder rates registers it weakly. Section~\ref{sec:e2e} quantifies this: the composite gate proceeds to stage 2 far more often than a conjunctive gate when one component is inert, and the error rate is protected only by the final co-primary test. Whether that cost is acceptable depends on how plausible single-serogroup failure is for the candidates at hand, and the design rule of Section~\ref{sec:e2e} places it in the scenario set for that reason.
+The same example supplies the design's principal caveat. The single-serogroup shortfall seen for one formulation is a failure on one component with adequate responses on the other three, and a composite that averages the four responder rates registers it weakly. Section~\ref{sec:e2e} quantifies this: the composite gate proceeds to stage 2 far more often than a conjunctive gate when one component is inert, and the error rate is protected only by the final co-primary test. Whether that cost is acceptable depends on how plausible single-serogroup failure is for the candidates at hand, and the design rule of Section~\ref{sec:rule} places it in the scenario set for that reason.
 
-The simulation study of Sections~\ref{sec:saving} and \ref{sec:e2e} uses the comparator seroresponse rates above so that its sample sizes are on the scale of this application, but it tests superiority ($\delta_k=0$) rather than non-inferiority with $\delta_k=-0.10$; the framework accommodates either, and a re-analysis of the formulation study under the non-inferiority margin is the intended illustration.
+The simulation study of Section~\ref{sec:sim} uses the comparator seroresponse rates above so that its sample sizes are on the scale of this application, but it tests superiority ($\delta_k=0$) rather than non-inferiority with $\delta_k=-0.10$; the framework accommodates either, and a re-analysis of the formulation study under the non-inferiority margin is the intended illustration.
 
-\section{Methodology}
+\section{The design}\label{sec:design}
 
 \subsection{Setting and notation}
 
-Consider a randomised two-stage seamless phase II/III trial comparing $M$ doses $d_1<\dots<d_M$ of an experimental agent with a concurrent control $C$ on $K$ binary component endpoints. Stage 1 randomises $n_1$ subjects to each of the $M+1$ arms. At the interim analysis at most one dose $a^\star$ is selected. Stage 2 randomises $n_2$ subjects to each of $a^\star$ and $C$. The final analysis pools both stages for $a^\star$ and $C$.
+Consider a randomised two-stage seamless phase II/III trial comparing $M$ doses, or formulations, $a=1,\dots,M$ of an experimental agent with a concurrent control $C$ on $K$ binary component endpoints; we say ``doses'' throughout, but no ordering of the arms is used. Stage 1 randomises $n_1$ subjects to each of the $M+1$ arms. At the interim analysis at most one dose $a^\star$ is selected. Stage 2 randomises $n_2$ subjects to each of $a^\star$ and $C$. The final analysis pools both stages for $a^\star$ and $C$. Figure~\ref{fig:schematic}(a) shows the flow of the trial, and Figure~\ref{fig:schematic}(b) the relation between the two functionals on which the two stages act.
 
-For a subject let $\bY=(Y_1,\dots,Y_K)\in\{0,1\}^K$. The $J=2^K$ response patterns $\by^{(1)},\dots,\by^{(J)}$ define multinomial cells with arm-specific probabilities $\bpi_a=(\pi_{a,1},\dots,\pi_{a,J})$, $a\in\{1,\dots,M,C\}$. For a cell set $\cR\subseteq\{1,\dots,J\}$ write $\pi_a(\cR)=\sum_{j\in\cR}\pi_{a,j}$. Let $\cR_k=\{j:y^{(j)}_k=1\}$ denote the cells in which component $k$ is a success; the marginal success probability is $p_{a,k}=\pi_a(\cR_k)$.
+\begin{figure}
+\centering
+\resizebox{\textwidth}{!}{\input{figures/schematic}}
+\caption{The design. (a) Stage 1 randomises to $M$ doses and control; the interim analysis selects the dose with the largest posterior probability that its weighted composite beats control by the margin $\gamma$, and stops for futility if that probability is below $\eta$; stage 2 continues the selected dose and control; the final analysis tests the $K$ co-primary endpoints with the data of both stages, with a closed test over all dose--endpoint hypotheses, each intersection being tested by an inverse-normal combination of its stage-wise $p$-values. (b) For $K=2$ endpoints, the four response patterns and their probabilities $\pi_{a,j}$; the component success probabilities $p_{a,k}$ and the composite $S_a(\bw)$ are sums of entries of the same vector, so one Dirichlet posterior serves both stages.}\label{fig:schematic}
+\end{figure}
 
-\subsection{Probability model}
+For a subject let $\bY=(Y_1,\dots,Y_K)\in\{0,1\}^K$. The $J=2^K$ response patterns $\by^{(1)},\dots,\by^{(J)}$ define multinomial cells with arm-specific probabilities $\bpi_a=(\pi_{a,1},\dots,\pi_{a,J})$, $a\in\{1,\dots,M,C\}$. For a cell set $\cR\subseteq\{1,\dots,J\}$ write $\pi_a(\cR)=\sum_{j\in\cR}\pi_{a,j}$. Let $\cR_k=\{j:y^{(j)}_k=1\}$ denote the cells in which component $k$ is a success; the marginal success probability is $p_{a,k}=\pi_a(\cR_k)$. Dose effects are written $\theta_{a,k}=p_{a,k}-p_{C,k}$, and the non-inferiority or superiority margins $\delta_k\le0$.
+
+\subsection{Probability model}\label{sec:model}
 
 Following Thall et al\cite{thall1995} and Yang et al\cite{yang2024}, each arm is modelled by a Dirichlet--multinomial pair,
 \begin{equation*}
 \bpi_a\sim\Dir(\balpha_a),\qquad
 \bx_a^{(s)}\mid\bpi_a\sim\Mult(n_s,\bpi_a),\quad s\in\{1,2\},
 \end{equation*}
-with $\bx_a^{(s)}$ the stage-$s$ cell counts. Conjugacy gives $\bpi_a\mid\bx_a^{(1)}\sim\Dir(\balpha'_a)$ with $\balpha'_a=\balpha_a+\bx_a^{(1)}$. Write $\alpha'_a(\cR)=\sum_{j\in\cR}\alpha'_{a,j}$ and $\alpha'_{a,0}=\alpha'_a(\{1,\dots,J\})$. The aggregation property of the Dirichlet distribution gives, for any $\cR$,
+with $\bx_a^{(s)}$ the stage-$s$ cell counts. Conjugacy gives $\bpi_a\mid\bx_a^{(1)}\sim\Dir(\balpha'_a)$ with $\balpha'_a=\balpha_a+\bx_a^{(1)}$. Write $\alpha'_a(\cR)=\sum_{j\in\cR}\alpha'_{a,j}$ and $\alpha'_{a,0}=\alpha'_a(\{1,\dots,J\})$. The aggregation property of the Dirichlet distribution (Appendix~\ref{app:dirichlet}) gives, for any $\cR$,
 \begin{equation}\label{eq:beta}
 \pi_a(\cR)\mid\bx_a^{(1)}\sim\Beta\big(\alpha'_a(\cR),\ \alpha'_{a,0}-\alpha'_a(\cR)\big).
 \end{equation}
-Each marginal $p_{a,k}$ therefore has an exact Beta posterior, and the dependence among $(p_{a,1},\dots,p_{a,K})$ is determined by the overlapping masses $\alpha'_a(\cR_k\cap\cR_{k'})$. No separate correlation parameter is introduced; the inter-endpoint dependence is a property of the shared cell-probability vector.
+Each marginal $p_{a,k}$ therefore has an exact Beta posterior, and the dependence among $(p_{a,1},\dots,p_{a,K})$ is determined by the overlapping masses $\alpha'_a(\cR_k\cap\cR_{k'})$. No separate correlation parameter is introduced; the inter-endpoint dependence is a property of the shared cell-probability vector. The prior $\balpha_a=\mathbf 1/J$ used throughout carries the weight of one observation per arm.
 
-\subsection{Stage 1: weighted composite selection}
+\subsection{Stage 1: weighted composite selection}\label{sec:stage1}
 
 Following Zaslavsky\cite{zaslavsky2013}, each component event is assigned a clinical weight $w_k\ge0$ with $\sum_k w_k=1$, and the subject-level weighted event score is $T=\sum_k w_kY_k\in[0,1]$. The arm-level composite is its expectation,
 \begin{equation}\label{eq:composite}
 S_a(\bw)=\E[T\mid a]=\sum_{k=1}^K w_k\,p_{a,k}=\bc(\bw)^\top\bpi_a,\qquad
 \bc(\bw)=\sum_{k=1}^K w_k\,\ind_{\cR_k},
 \end{equation}
-a linear functional of $\bpi_a$, where $\ind_{\cR_k}$ is the $J$-vector indicating the cells in $\cR_k$. The composite contrast is $\Delta_a=S_a-S_C$. From \eqref{eq:beta} and the Dirichlet covariance structure,
+a linear functional of $\bpi_a$, where $\ind_{\cR_k}$ is the $J$-vector indicating the cells in $\cR_k$. The composite contrast is $\Delta_a=S_a-S_C$. From \eqref{eq:beta} and the Dirichlet covariance structure (Appendix~\ref{app:dirichlet}),
 \begin{align}
 \E[S_a\mid\bx_a^{(1)}]&=\sum_{k=1}^K w_k\,\frac{\alpha'_a(\cR_k)}{\alpha'_{a,0}},\notag\\
 \Var[S_a\mid\bx_a^{(1)}]&=\frac{\displaystyle\sum_{k=1}^K\sum_{k'=1}^K w_kw_{k'}\Big[\alpha'_{a,0}\,\alpha'_a(\cR_k\cap\cR_{k'})-\alpha'_a(\cR_k)\,\alpha'_a(\cR_{k'})\Big]}{(\alpha'_{a,0})^2(\alpha'_{a,0}+1)}.\label{eq:moments}
 \end{align}
-The cross terms $k\ne k'$ carry the inter-endpoint dependence through the joint cell masses. For $\bw\in\{0,1\}^K$ the posterior of $S_a$ is exactly Beta by \eqref{eq:beta}; for general $\bw$ it is obtained by Monte Carlo draws of $\bpi_a$, or approximated by a Beta distribution matched to the moments in \eqref{eq:moments}.
+The cross terms $k\ne k'$ carry the inter-endpoint dependence through the joint cell masses. For $\bw\in\{0,1\}^K$ the posterior of $S_a$ is exactly Beta by \eqref{eq:beta}; for general $\bw$ it can be obtained by Monte Carlo draws of $\bpi_a$ or approximated by a normal or Beta distribution matched to the moments in \eqref{eq:moments}. Everything in this paper uses the normal approximation with the exact moments, for both the composite and the component contrasts, so that the two selection rules compared below differ only in the functional they rank.
+
+\paragraph{What the Bayesian model contributes.}
+With the weak prior $\balpha_a=\mathbf 1/J$, the posterior probability $G_a$ defined below is numerically close to a one-sided $z$-test of the composite contrast with the plug-in variance, and the operating characteristics reported in Section~\ref{sec:sim} are, to that approximation, those of the corresponding $z$-tests. The Dirichlet--multinomial formulation is nevertheless the natural one for this design for three reasons. It supplies, from a single posterior and without a plug-in covariance estimate, the exact posterior moments of every functional of the cell probabilities that either stage uses, including the covariance between component success probabilities that the conjunctive gate needs and the variance of the composite that pools them. It accommodates informative or hierarchical priors, for example historical information on the control arm or borrowing across doses, without changing the error-control argument of Section~\ref{sec:t1e}, since the final test is valid for any stage-1 rule. And it provides the predictive probability of success used for stage-2 sample size re-estimation in Section~\ref{sec:calib}. None of these is exploited in the simulation study, which is deliberately run with a non-informative prior so that the comparison between gates is not confounded by prior information.
 
 \paragraph{Weights.}
-In a confirmatory seamless design the weights are fixed at the design stage and pre-specified. Data-dependent weighting would introduce an adaptive element outside the error-control argument of Section~\ref{sec:t1e}. Zaslavsky\cite{zaslavsky2013} calibrates weights by a Bayesian non-inferiority argument; we propose instead calibrating $\bw$ against the confirmatory target. Over a pre-specified scenario set $\Theta$ of cell configurations, define the correct dose $a^\circ(\theta)$ as the dose maximising the co-primary criterion $\min_k\big(p_{a,k}-p_{C,k}-\delta_k\big)$, and choose
+In a confirmatory seamless design the weights are fixed at the design stage and pre-specified. Data-dependent weighting would introduce an adaptive element that Theorem~\ref{thm:t1e} does not need to exclude, since the final test is valid for any stage-1 selection rule, but it would make the selection criterion harder to justify to a regulator and would change the operating characteristics studied below. Zaslavsky\cite{zaslavsky2013} calibrates weights by a Bayesian non-inferiority argument; we propose instead calibrating $\bw$ against the confirmatory target. Over a pre-specified scenario set $\Theta$ of dose-effect configurations, define the correct dose $a^\circ(\theta)$ as the dose maximising the co-primary criterion $\min_k(\theta_{a,k}-\delta_k)$, and choose
 \begin{equation}\label{eq:weights}
 \bw^\star=\arg\max_{\bw\in\cW}\ \frac{1}{|\Theta|}\sum_{\theta\in\Theta}\Pr_\theta\big(a^\star=a^\circ(\theta)\big),
 \end{equation}
-where $\cW$ encodes clinical constraints, for example an ordering $w_{(1)}\ge\dots\ge w_{(K)}$ reflecting component priority. This ties the selection gate to the co-primary endpoint it is required to predict.
+where $\cW$ encodes clinical constraints, for example an ordering $w_{(1)}\ge\dots\ge w_{(K)}$ reflecting component priority, or a lower bound $w_k\ge w_{\min}$ on every weight so that no component is ignored. This ties the selection gate to the co-primary endpoint it is required to predict. Two points about \eqref{eq:weights} matter for the interpretation of the results. First, the scenario set is part of the design and must be fixed before the trial from external knowledge; weights calibrated on a single configuration and then evaluated on it give the best case for that configuration, not what a design facing uncertainty about $\theta$ can achieve, and Section~\ref{sec:selection} reports both. Second, when $\Theta$ contains configurations that rank the doses differently on the composite and on the co-primary criterion, no weight vector serves them all, the average in \eqref{eq:weights} is pulled down, and the calibration itself signals that the composite gate is not suitable for that scenario set; Section~\ref{sec:rule} builds this into the design rule.
 
 \paragraph{Selection and gating.}
 With composite-scale margin $\gamma$ and go/no-go boundary $\eta$, define
@@ -58,69 +79,90 @@ With composite-scale margin $\gamma$ and go/no-go boundary $\eta$, define
 G_a=\Pr\big(\Delta_a>\gamma\mid\bx^{(1)}\big),\qquad
 a^\star=\arg\max_{a\in\{1,\dots,M\}}G_a .
 \end{equation}
-The trial proceeds to stage 2 if and only if $G_{a^\star}\ge\eta$; otherwise it stops for futility. A natural choice is $\gamma=\sum_k w_k\delta_k$, the image of the co-primary margins under \eqref{eq:composite}. An alternative gate replaces $G_a$ with the predictive probability of co-primary success defined in Section~\ref{sec:calib}, at greater computational cost. The gate in \eqref{eq:gate} is a single scalar contrast per arm; it involves no conjunction over endpoints and no per-endpoint minimum.
+The trial proceeds to stage 2 if and only if $G_{a^\star}\ge\eta$; otherwise it stops for futility. A natural choice is $\gamma=\sum_k w_k\delta_k$, the image of the co-primary margins under \eqref{eq:composite}. The gate in \eqref{eq:gate} is a single scalar contrast per arm; it involves no conjunction over endpoints and no per-endpoint minimum. The reference design against which it is compared below, the conjunctive or co-primary gate of Yang et al\cite{yang2024}, ranks doses by $\min_k\Pr(p_{a,k}-p_{C,k}>\delta_k\mid\bx^{(1)})$ and proceeds if that minimum exceeds $\eta$. An alternative gate replaces $G_a$ by the predictive probability of co-primary success defined in Section~\ref{sec:calib}, at greater computational cost.
 
-\subsection{Stage 2 and final analysis: co-primary endpoints}\label{sec:final}
+\subsection{Stage 2 and final analysis}\label{sec:final}
 
 For dose $a$ and endpoint $k$ define the one-sided null hypothesis
 \begin{equation*}
 H_{a,k}:\ p_{a,k}-p_{C,k}\le\delta_k,
 \end{equation*}
-where $\delta_k\le0$ for non-inferiority and $\delta_k=0$ for superiority. The confirmatory claim for $a^\star$ is the rejection of $H_{a^\star,k}$ for every $k$, that is, rejection of the union $\bigcup_k H_{a^\star,k}$.
+where $\delta_k<0$ for non-inferiority and $\delta_k=0$ for superiority. The confirmatory claim for $a^\star$ asserts that $a^\star$ is effective on every endpoint, that is, it rejects the union
+\begin{equation*}
+H^{\cup}_{a^\star}=\bigcup_{k=1}^K H_{a^\star,k},
+\end{equation*}
+``$a^\star$ is not effective on every endpoint''. A false claim is the rejection of a true $H^\cup_{a^\star}$, that is, a claim for a dose with at least one true $H_{a^\star,k}$. The requirement is that the probability of a false claim be at most $\alpha$ whatever the true effects. The final analysis is a closed test over the $MK$ elementary hypotheses $H_{a,k}$, all doses and all endpoints, with each intersection tested by a combination of stage-wise $p$-values; it controls the family-wise error rate over all $MK$ hypotheses, which implies the requirement.
 
 \paragraph{Stage-wise $p$-values.}
-For each $(a,k)$ let $p^{(1)}_{a,k}$ be the one-sided $p$-value for $H_{a,k}$ from stage-1 data alone, comparing dose $a$ with the stage-1 control subjects. For $a^\star$ let $p^{(2)}_k$ be the one-sided $p$-value from stage-2 data alone, comparing $a^\star$ with the stage-2 control subjects. Normal-approximation score tests suffice; exact tests may be substituted.
+For each $(a,k)$ let $p^{(1)}_{a,k}$ be the one-sided $p$-value for $H_{a,k}$ from stage-1 data alone, comparing dose $a$ with the stage-1 control subjects. For $a^\star$ let $p^{(2)}_k$ be the one-sided $p$-value from stage-2 data alone, comparing $a^\star$ with the stage-2 control subjects. Throughout we use the Wald test for a difference of proportions with unpooled variance, which is valid asymptotically; for a non-inferiority margin the Farrington--Manning score test is the usual choice, and exact tests may be substituted, since Theorem~\ref{thm:t1e} requires only that each $p$-value be valid for its hypothesis.
 
-\paragraph{Closed testing over doses.}
-For each $I\subseteq\{1,\dots,M\}$ with $a^\star\in I$, the intersection hypothesis $H_{I,k}=\bigcap_{a\in I}H_{a,k}$ receives the stage-1 $p$-value
-\begin{equation*}
-p^{(1)}_{I,k}=\min\Big\{1,\ |I|\,\min_{a\in I}p^{(1)}_{a,k}\Big\}
-\end{equation*}
-by the Bonferroni inequality, or the Simes $p$-value $p^{(1)}_{I,k}=\min_{j}\,(|I|/j)\,p^{(1)}_{(j),k}$ with $p^{(1)}_{(1),k}\le\dots\le p^{(1)}_{(|I|),k}$ the ordered values over $a\in I$, which is valid under the positive dependence induced by the shared control \cite{sarkar1998} and avoids the loss of power that occurs when a Bonferroni-adjusted stage-1 $p$-value equals one and $\Phi^{-1}(0)=-\infty$ enters the combination; and the stage-2 $p$-value $p^{(2)}_{I,k}=p^{(2)}_k$. These are combined by the inverse-normal rule \cite{lehmacher1999},
+\paragraph{Closed testing over doses and endpoints.}
+Let $\cJ=\{1,\dots,M\}\times\{1,\dots,K\}$ be the set of dose--endpoint pairs. For a non-empty $J\subseteq\cJ$ the intersection hypothesis $H_J=\bigcap_{(a,k)\in J}H_{a,k}$ states that every pair in $J$ is null. Its stage-1 $p$-value combines the stage-1 $p$-values of all pairs in $J$,
+\begin{equation}\label{eq:p1J}
+p^{(1)}_{J}=\psi_{|J|}\Big(\big(p^{(1)}_{a,k}\big)_{(a,k)\in J}\Big),
+\end{equation}
+where $\psi_m$ is a valid combination of $m$ $p$-values for their intersection: the Bonferroni combination $\psi_m(u_1,\dots,u_m)=\min\{1,\,m\min_i u_i\}$, or the Simes combination $\psi_m(u_1,\dots,u_m)=\min_i\,(m/i)\,u_{(i)}$ with $u_{(1)}\le\dots\le u_{(m)}$\cite{simes1986}, which is valid under the positive dependence induced by the shared control arm and by positively correlated endpoints\cite{sarkar1998,benjamini2001} and avoids the loss of power that occurs when a Bonferroni-adjusted $p$-value equals one and $\Phi^{-1}(0)=-\infty$ enters the combination below. Only the selected dose has stage-2 data. Writing $J^\star=\{k:(a^\star,k)\in J\}$ for the endpoints that $J$ contains for the selected dose, the stage-2 $p$-value of $H_J$ is
+\begin{equation}\label{eq:p2J}
+p^{(2)}_{J}=\psi_{|J^\star|}\Big(\big(p^{(2)}_{k}\big)_{k\in J^\star}\Big),\qquad p^{(2)}_J=1\ \text{if }J^\star=\emptyset,
+\end{equation}
+as in Posch et al\cite{posch2005} and Bretz et al\cite{bretz2006}: the doses dropped at the interim contribute no stage-2 data, and under $H_J$ every hypothesis in $J^\star$ is true. The stage-wise $p$-values are combined by the inverse-normal rule\cite{lehmacher1999},
 \begin{equation}\label{eq:comb}
 \cC(p_1,p_2)=1-\Phi\Big(v_1\,\Phi^{-1}(1-p_1)+v_2\,\Phi^{-1}(1-p_2)\Big),\qquad v_1^2+v_2^2=1,
 \end{equation}
-with $v_1=\sqrt{n_1/(n_1+n_2^{\mathrm{plan}})}$ fixed in advance, so that a re-estimated stage-2 sample size leaves the combination weights unchanged. The hypothesis $H_{a^\star,k}$ is rejected if and only if $\cC\big(p^{(1)}_{I,k},p^{(2)}_{I,k}\big)\le\alpha$ for every $I\ni a^\star$ \cite{marcus1976,posch2005,bretz2006}.
+with $v_1=\sqrt{n_1/(n_1+n_2^{\mathrm{plan}})}$ fixed in advance, so that a re-estimated stage-2 sample size leaves the combination weights unchanged. The intersection $H_J$ is rejected if and only if
+\begin{equation}\label{eq:rejJ}
+\cC\big(p^{(1)}_{J},\,p^{(2)}_{J}\big)\le\alpha ,
+\end{equation}
+and, by the closure principle\cite{marcus1976}, $H_{a^\star,k}$ is rejected if and only if $H_J$ is rejected for every $J\ni(a^\star,k)$. The claim for $a^\star$ is made if and only if $H_{a^\star,k}$ is rejected for every $k$. Equivalently, with the adjusted $p$-value $\tilde p_k=\max_{J\ni(a^\star,k)}\cC(p^{(1)}_{J},p^{(2)}_{J})$, the claim is made if and only if $\max_k\tilde p_k\le\alpha$. For $J=\{(a^\star,k)\}$ condition \eqref{eq:rejJ} is the ordinary test of endpoint $k$ for the selected dose with the two stages combined; the larger intersections add the penalty for having chosen $a^\star$ among $M$ doses and for testing $K$ endpoints, and a non-selected dose that is clearly effective relaxes the penalty through its small stage-1 $p$-values, whereas one that fails on some endpoint does not.
 
-\paragraph{Intersection--union over endpoints.}
-The co-primary claim is made if and only if $H_{a^\star,k}$ is rejected for all $k=1,\dots,K$. By the intersection--union principle \cite{berger1982}, each endpoint is tested at the unadjusted level $\alpha$.
+\paragraph{Computation.}
+There are $2^{MK-1}$ intersections containing a given pair, 2048 for $M=3$ and $K=4$, but the maximum in $\tilde p_k$ has a closed form. Both combinations $\psi_m$ are non-decreasing in each argument for fixed $m$, and $\cC$ is non-decreasing in both arguments, so among the intersections with a given set $J^\star\ni k$ of selected-dose endpoints and a given number $j$ of other-dose pairs, the largest combined $p$-value is attained by the $j$ largest stage-1 $p$-values of the other doses. Hence
+\begin{equation}\label{eq:shortcut}
+\tilde p_k=\max_{J^\star\ni k}\ \max_{0\le j\le(M-1)K}\ \cC\Big(\psi_{|J^\star|+j}\big((p^{(1)}_{a^\star,k'})_{k'\in J^\star},\,o_{(1)},\dots,o_{(j)}\big),\ \psi_{|J^\star|}\big((p^{(2)}_{k'})_{k'\in J^\star}\big)\Big),
+\end{equation}
+where $o_{(1)}\ge o_{(2)}\ge\dots$ are the stage-1 $p$-values of the $(M-1)K$ pairs of the non-selected doses in decreasing order; this is $2^{K-1}\{(M-1)K+1\}$ evaluations per endpoint, 72 in the example, and it is exact.
 
-\subsection{Type I error control}\label{sec:t1e}
+\paragraph{Two alternatives.}
+The closed test above is the direct extension of the single-endpoint adaptive closed test to $MK$ hypotheses, and it protects every statement about every $H_{a,k}$, including per-endpoint statements about the selected dose that a reader may take from the same analysis. If only the co-primary claim is of interest, a dose-level closure is available: with the intersection--union $p$-values $q^{(1)}_a=\max_kp^{(1)}_{a,k}$ for $H^\cup_a$, the intersection $\bigcap_{a\in I}H^\cup_a$ over a set of doses $I\ni a^\star$ is tested by rejecting, for every $k$, $\cC\big(\psi_{|I|}(p^{(1)}_{a^\star,k},(q^{(1)}_a)_{a\in I\setminus\{a^\star\}}),\,p^{(2)}_k\big)\le\alpha$, and the claim is made if every $I\ni a^\star$ is rejected. It controls the false-claim rate for every configuration (Appendix~\ref{app:union}), closes over doses only, and does not adjust for the $K$ endpoints of the selected dose, so it is more powerful; what it does not control is the family-wise rate over all $MK$ hypotheses. The second alternative, closing each endpoint separately over doses with the same-endpoint $p$-values $p^{(1)}_{a,k}$ of the other doses, controls for each fixed $k$ the probability of rejecting a true $H_{a,k}$ for any dose, but not the probability of a false co-primary claim, because the selected dose's null endpoint can differ from one dose to another; Section~\ref{sec:t1e} shows that it fails exactly then. Section~\ref{sec:error} compares the three.
 
-\begin{proposition}
-Let the stage-1 selection rule, the stopping rule and the stage-2 sample size $n_2$ be arbitrary measurable functions of stage-1 data and external information. Then the probability of a false co-primary claim is at most $\alpha$.
-\end{proposition}
+\subsection{Error control}\label{sec:t1e}
 
-\begin{proof}
-A false claim requires some $k_0$ for which $H_{a^\star,k_0}$ is true. Let $I_0=\{a:H_{a,k_0}\text{ true}\}$, a fixed set containing $a^\star$ on that event. The claim entails rejection of $H_{a^\star,k_0}$ and hence, by closure, rejection of $H_{I_0,k_0}$. Under $H_{I_0,k_0}$ the stage-1 $p$-value $p^{(1)}_{I_0,k_0}$ is valid by the Bonferroni inequality, or by the Simes inequality under positive dependence. Conditionally on stage-1 data, $p^{(2)}_{k_0}$ is computed from stage-2 observations independent of stage 1, and since $H_{a^\star,k_0}$ is true it is conditionally stochastically no smaller than uniform. The inverse-normal combination \eqref{eq:comb} is therefore a level-$\alpha$ test of $H_{I_0,k_0}$ \cite{bauer1994}, and
+\begin{theorem}\label{thm:t1e}
+Suppose that (i) the stage-2 observations are independent of the stage-1 observations given the interim decisions; (ii) under $H_{a,k}$ each stage-1 $p$-value satisfies $\Pr(p^{(1)}_{a,k}\le u)\le u$ for all $u\in[0,1]$, and $\psi$ is the Bonferroni combination, or the Simes combination when the stage-1 $p$-values of the true hypotheses, which may belong to different doses and to different endpoints, satisfy the Simes inequality; (iii) conditionally on the stage-1 data and the interim decisions, $p^{(2)}_k$ satisfies $\Pr(p^{(2)}_k\le u\mid\bx^{(1)})\le u$ whenever $H_{a^\star,k}$ is true, and, for the Simes combination, the stage-2 $p$-values of the selected dose's true endpoints satisfy the Simes inequality conditionally. Let the selection rule, the futility rule and the stage-2 sample size $n_2$ be arbitrary functions of the stage-1 data and of information independent of the stage-2 data, with $v_1$ fixed in advance. Then, for every configuration of cell probabilities $(\bpi_1,\dots,\bpi_M,\bpi_C)$, the probability that the closed test rejects any true $H_{a,k}$ is at most $\alpha$; in particular,
 \begin{equation*}
-\Pr(\text{false claim})\le\Pr\big(\text{reject }H_{I_0,k_0}\big)\le\alpha .
+\Pr\big(\text{claim for }a^\star\ \text{and}\ H^\cup_{a^\star}\text{ true}\big)\le\alpha .
 \end{equation*}
-\end{proof}
+\end{theorem}
 
-\begin{remark}
-The argument makes no use of the form of the selection rule. Selecting on the composite $S_a$ rather than on the co-primary components therefore introduces no inflation beyond that already absorbed by closure over doses: the composite affects the probability of correct selection and hence power, but not the type I error rate. This is what makes the composite-to-co-primary switch admissible in a confirmatory setting. Two conditions are essential. Stage-1 control subjects contribute only to $p^{(1)}$ and stage-2 control subjects only to $p^{(2)}$, and the futility rule is treated as non-binding.
+The proof is in Appendix~\ref{app:proof}. Its structure is the standard one for adaptive closed tests\cite{bauer1994,posch2005,bretz2006}: any false rejection, and in particular a false claim, rejects the intersection of all true elementary hypotheses, a fixed set that does not depend on the selection, and the test of that intersection has level $\alpha$ because its stage-1 component is a valid combination of valid $p$-values and its stage-2 component is conditionally valid given stage 1. Conditions (ii) and (iii) ask for exactly valid $p$-values; the Wald $p$-values used in Section~\ref{sec:sim} satisfy them only asymptotically, so in finite samples the bound holds up to the size of the Wald test itself, an excess that Section~\ref{sec:error} measures. The closure over all $MK$ pairs is what makes the true intersection a fixed set: it contains, for every dose that is not effective on every endpoint, that dose's own null endpoints, whichever they are.
+
+\begin{remark}[The per-endpoint closure does not suffice]\label{rem:perendpoint}
+Closing each endpoint separately over doses controls, for each $k$, the family-wise error rate over $H_{1,k},\dots,H_{M,k}$, and its proof of false-claim control would require a single endpoint $k_0$ on which every dose that is not effective on every endpoint is null, so that the true intersection on $k_0$ does not depend on the selected dose. Configurations N0--N2 of Section~\ref{sec:sim}, the global null, a single null endpoint shared by all doses, and a subset of doses null on every endpoint, satisfy this, and in them the closures behave alike. Configurations N3 and N4, in which dose $a$ is null on endpoint $a$ only and effective elsewhere, do not: there the selection rule, whether composite or conjunctive, favours the dose whose null endpoint happens to look best in stage 1, that same stage-1 statistic enters the combination test for the selected dose's null endpoint, and the two are positively correlated. Appendix~\ref{app:counter} gives the calculation; the simulated false-claim rates of the per-endpoint closure in N3 and N4 exceed $\alpha$ for both gates (Table~\ref{tab:closure}), whereas the full closure and the dose-level closure keep them below $\alpha$.
 \end{remark}
 
-\subsection{Estimation for the selected dose}
+\begin{remark}[What the theorem does and does not require]
+The argument makes no use of the form of the selection rule. Selecting on the composite $S_a$ rather than on the co-primary components therefore introduces no inflation beyond that already absorbed by the closure: the composite affects the probability of correct selection and hence power, but not the bound on the type I error rate. This is what makes the composite-to-co-primary switch admissible in a confirmatory setting; how close a given gate comes to the bound does depend on the gate, as Section~\ref{sec:error} shows. Three conditions are essential. Stage-1 control subjects contribute only to $p^{(1)}$ and stage-2 control subjects only to $p^{(2)}$; the combination weights are fixed before the interim; and the futility rule is non-binding, in that a trial that stops makes no claim, so that stopping can only reduce the claim probability. The $p$-values used in Section~\ref{sec:sim} are Wald $p$-values, valid asymptotically; conditions (ii) and (iii) then hold up to the normal approximation, and Section~\ref{sec:error} measures the resulting finite-sample excess over $\alpha$. The Simes inequality holds when the test statistics are positively regression dependent\cite{benjamini2001}, which is the case for jointly normal statistics with non-negative correlations: stage-1 statistics for different doses on the same endpoint are positively correlated through the shared control, statistics for different endpoints are correlated with the sign of the inter-endpoint dependence, and the same holds for the selected dose's stage-2 statistics across endpoints; when negative dependence between endpoints cannot be excluded, the Bonferroni combination should be used.
+\end{remark}
+
+\subsection{Estimation for the selected dose}\label{sec:estim}
 
 The pooled posterior $\Dir\big(\balpha_{a^\star}+\bx^{(1)}_{a^\star}+\bx^{(2)}_{a^\star}\big)$ ignores the selection event
 \begin{equation*}
 \cA=\Big\{a^\star=\arg\max_a G_a,\ G_{a^\star}\ge\eta\Big\}.
 \end{equation*}
-Because $S_{a^\star}$ and each $p_{a^\star,k}$ are increasing functionals of overlapping cells of the same $\bpi_{a^\star}$, conditioning on $\cA$ inflates the stage-1 contribution to every $p_{a^\star,k}$; the shared cells are the conduit of the bias, and the stronger the dependence between composite and components the more directly it is transmitted. The selection-conditional posterior is
+Because $S_{a^\star}$ and each $p_{a^\star,k}$ are increasing functionals of overlapping cells of the same $\bpi_{a^\star}$, conditioning on $\cA$ inflates the stage-1 contribution to every $p_{a^\star,k}$; the shared cells are the conduit of the bias, and the stronger the dependence between composite and components the more directly it is transmitted. This is the selection bias familiar from seamless designs with a single endpoint\cite{bowden2008,kimani2013}, with the particular feature that the bias enters the confirmatory endpoints through a different functional from the one that was selected on. The selection-conditional posterior is
 \begin{equation}\label{eq:selcond}
 p\big(\bpi_{a^\star}\mid\bx,\cA\big)\propto p\big(\bpi_{a^\star}\mid\bx\big)\,\Pr\big(\cA\mid\bpi_{a^\star},\bpi_{-a^\star}\big),
 \end{equation}
-evaluated by Monte Carlo with the competitor arms $\bpi_{-a^\star}$ integrated over their stage-1 posteriors. We report three quantities for each $k$: the pooled posterior; the stage-2-only posterior $\Dir\big(\balpha_{a^\star}+\bx^{(2)}_{a^\star}\big)$, which is unaffected by selection; and a hierarchical alternative $\bpi_a\mid\bmm,\tau\sim\Dir(\tau\bmm)$ with a base measure $\bmm$ shared across doses, which shrinks the selected arm towards the cross-dose mean. The residual bias of the pooled estimate is reported as an operating characteristic.
+evaluated by Monte Carlo with the competitor arms $\bpi_{-a^\star}$ integrated over their stage-1 posteriors. Three estimates can be reported for each $k$: the pooled posterior; the stage-2-only posterior $\Dir\big(\balpha_{a^\star}+\bx^{(2)}_{a^\star}\big)$, which is unaffected by selection; and \eqref{eq:selcond}. The claim itself does not depend on any of them, since it rests on the test of Section~\ref{sec:final}; estimation is not pursued further here.
 
 \subsection{Design calibration and sample size}\label{sec:calib}
 
 The design parameters are $(n_1,n_2,\bw,\gamma,\eta,\alpha,v_1)$. Given $\alpha$ and $v_1$, calibration proceeds in three steps.
 
 \begin{enumerate}[label=(\roman*),leftmargin=*]
-\item \emph{Stage-1 size $n_1$.} With $\bw=\bw^\star$ from \eqref{eq:weights}, choose the smallest $n_1$ such that the probability of correct selection meets a target $\PCS^\ast$ over $\Theta$. Whether this $n_1$ is smaller than under a conjunctive gate of the form $\min_k G_{a,k}$, as used by Yang et al\cite{yang2024}, depends on the scenario set; Section~\ref{sec:saving} gives the conditions and the magnitude.
-\item \emph{Boundary $\eta$.} Choose the largest $\eta$ such that the probability of stopping under the design alternative is at most a tolerance $\varepsilon$. Larger $\eta$ terminates more ineffective trials under the null.
+\item \emph{Stage-1 size $n_1$.} With $\bw=\bw^\star$ from \eqref{eq:weights}, choose the smallest $n_1$ such that the probability of correct selection meets a target $\PCS^\ast$ over $\Theta$. Whether this $n_1$ is smaller than under the conjunctive gate depends on the scenario set; Section~\ref{sec:saving} gives the conditions and the magnitude.
+\item \emph{Boundary $\eta$.} Choose $\eta$ so that the probability of proceeding under the global null equals a pre-specified value; equivalently, choose the largest $\eta$ such that the probability of stopping under the design alternative is at most a tolerance $\varepsilon$. Larger $\eta$ terminates more ineffective trials under the null. Because the futility rule is non-binding, $\eta$ does not enter the error-control argument, and it is calibrated separately for whichever gate is used so that designs are compared at equal behaviour under the null.
 \item \emph{Stage-2 size $n_2$.} Either fix $n_2$ to achieve conjunctive power $1-\beta$ at the design alternative, or re-estimate at the interim by predictive probability of success,
 \begin{equation}\label{eq:ppos}
 \begin{aligned}
@@ -128,96 +170,76 @@ The design parameters are $(n_1,n_2,\bw,\gamma,\eta,\alpha,v_1)$. Given $\alpha$
 n_2^\star&=\min\big\{n_2\in[n_{\min},n_{\max}]:\PPoS(n_2)\ge1-\beta\big\},
 \end{aligned}
 \end{equation}
-computed by Monte Carlo from the Dirichlet posteriors of $a^\star$ and $C$ (cf.\ Yang et al\cite{yang2024} and Li et al\cite{li2024}).
+computed by Monte Carlo from the Dirichlet posteriors of $a^\star$ and $C$ (cf.\ Yang et al\cite{yang2024} and Li et al\cite{li2024}). Theorem~\ref{thm:t1e} covers either choice.
 \end{enumerate}
 
 The total sample size is $N=(M+1)\,n_1+2\,n_2$. Because the stage-1 subjects on $a^\star$ and $C$ enter the final analysis, the stage-2 size required for a given conjunctive power is approximately $n_2\approx n_{\mathrm{tot}}-n_1$, where $n_{\mathrm{tot}}$ is the per-arm size a single-stage co-primary trial would need; hence
 \begin{equation}\label{eq:accounting}
 N\approx(M-1)\,n_1+2\,n_{\mathrm{tot}}.
 \end{equation}
-The gate therefore affects $N$ only through $(M-1)\,n_1$: the $M-1$ discarded arms are the cost of selection, and any difference between gates in $N$ is $(M-1)$ times the difference in the $n_1$ each needs to reach $\PCS^\ast$. Section~\ref{sec:saving} examines when this difference favours the composite gate.
+The gate therefore affects $N$ only through $(M-1)\,n_1$: the $M-1$ discarded arms are the cost of selection, and any difference between gates in $N$ is $(M-1)$ times the difference in the $n_1$ each needs to reach $\PCS^\ast$. The approximation ignores the futility rule, which the end-to-end simulation of Section~\ref{sec:e2e} restores.
 
+\section{When does the composite gate save sample size?}\label{sec:saving}
 
-\subsection{Expected sample size: conditions for a reduction}\label{sec:saving}
-
-By \eqref{eq:accounting}, the composite gate reduces expected sample size relative to a conjunctive gate if and only if it reaches the target $\PCS^\ast$ with a smaller $n_1$, and the reduction is $(M-1)\big(n_1^{\mathrm{M}}-n_1^{\mathrm{C}}\big)$, where superscripts M and C denote the conjunctive (minimum over endpoints) and composite gates. No unconditional guarantee exists. The comparison is governed by two features of the dose-effect configuration $\bm\theta=(\theta_{a,k})$, $\theta_{a,k}=p_{a,k}-p_{C,k}$: whether the composite and co-primary criteria rank the doses in the same order (concordance), and how the dose-discriminating information is distributed across endpoints.
+By \eqref{eq:accounting}, the composite gate reduces expected sample size relative to a conjunctive gate if and only if it reaches the target $\PCS^\ast$ with a smaller $n_1$, and the reduction is $(M-1)\big(n_1^{\mathrm{M}}-n_1^{\mathrm{C}}\big)$, where superscripts M and C denote the conjunctive (minimum over endpoints) and composite gates. No unconditional guarantee exists. The comparison is governed by two features of the dose-effect configuration $\bm\theta=(\theta_{a,k})$: whether the composite and co-primary criteria rank the doses in the same order (concordance), and how the dose-discriminating information is distributed across endpoints.
 
 \paragraph{Failure under discordance.}
-Let $a^\circ=\arg\max_a\min_k(\theta_{a,k}-\delta_k)$ be the co-primary-optimal dose and $a^{\mathrm{C}}=\arg\max_a\bw^\top\bm\theta_a$ the composite-optimal dose. The composite gate is consistent for $a^{\mathrm{C}}$: as $n_1\to\infty$, $\Pr(a^\star=a^{\mathrm{C}})\to1$. If $a^{\mathrm{C}}\ne a^\circ$ then $\PCS\to0$ and no $n_1$ attains $\PCS^\ast$; increasing $n_1$ makes matters worse. The composite gate is admissible only for weights $\bw$ that are concordant over the scenario set $\Theta$, which is the purpose of the constraint set $\cW$ and the calibration \eqref{eq:weights}. Concordance is a property of $(\bw,\bm\theta)$ that can be checked at the design stage; it is not testable from stage-1 data.
+Let $a^\circ=\arg\max_a\min_k(\theta_{a,k}-\delta_k)$ be the co-primary-optimal dose and $a^{\mathrm{C}}=\arg\max_a\bw^\top\bm\theta_a$ the composite-optimal dose. The composite gate is consistent for $a^{\mathrm{C}}$: as $n_1\to\infty$, $\Pr(a^\star=a^{\mathrm{C}})\to1$ (Appendix~\ref{app:bracket}). If $a^{\mathrm{C}}\ne a^\circ$ then $\PCS\to0$ and no $n_1$ attains $\PCS^\ast$; increasing $n_1$ makes matters worse. The composite gate is admissible only for weights $\bw$ that are concordant over the scenario set $\Theta$, which is the purpose of the constraint set $\cW$ and the calibration \eqref{eq:weights}. Concordance is a property of $(\bw,\bm\theta)$ that can be checked at the design stage; it is not testable from stage-1 data, and it is the part of the design that most needs to be defended in a protocol.
 
 \paragraph{Second-moment approximation under parallel effects.}
-Suppose $\theta_{a,k}=\theta_a$ for all $k$ (every endpoint carries the same dose effect), the component estimates have common variance $\sigma^2/n_1$ within an arm and common pairwise correlation $\rho$ (the product-moment correlation of the binary components), $\delta_k=0$ and $\bw$ is uniform. For doses $a$ and $b$, the composite ranking statistic has pairwise difference
+Suppose $\theta_{a,k}=\theta_a$ for all $k$ (every endpoint carries the same dose effect), the component estimates have common variance $\sigma^2/n_1$ within an arm and common pairwise correlation $\phi$ (the product-moment correlation of the binary components), $\delta_k=0$ and $\bw$ is uniform. For doses $a$ and $b$, the composite ranking statistic has pairwise difference
 \begin{equation*}
 T^{\mathrm{C}}_a-T^{\mathrm{C}}_b=\frac1K\sum_k\big(\hat p_{a,k}-\hat p_{b,k}\big),\qquad
 \E=\theta_a-\theta_b,\qquad
-\Var=\frac{2\sigma^2}{n_1}\Big[\rho+\frac{1-\rho}{K}\Big],
+\Var=\frac{2\sigma^2}{n_1}\Big[\phi+\frac{1-\phi}{K}\Big],
 \end{equation*}
-in which the control estimate cancels exactly. The conjunctive ranking statistic is $T^{\mathrm{M}}_a=\min_k(\hat p_{a,k}-\hat p_{C,k})$. Writing $\hat p_{a,k}-\hat p_{C,k}=\theta_a+\varepsilon_{a,k}-e_k$ with $\bm\varepsilon_a$ and $\mathbf e$ equicorrelated normal vectors, the minimum has the representation $\theta_a+\sigma\sqrt{\rho}\,Z_a+\sigma\sqrt{1-\rho}\,\min_k\xi_{a,k}-(\text{control term})$ with $\xi_{a,k}$ independent standard normal. By exchangeability of the components the expected shift induced by the minimum is common to all doses and cancels in $T^{\mathrm{M}}_a-T^{\mathrm{M}}_b$, so $\E\big[T^{\mathrm{M}}_a-T^{\mathrm{M}}_b\big]=\theta_a-\theta_b$: both gates have the same signal. Ignoring the shared control term, 
+in which the control estimate cancels exactly. The conjunctive ranking statistic is $T^{\mathrm{M}}_a=\min_k(\hat p_{a,k}-\hat p_{C,k})$. Appendix~\ref{app:bracket} shows that, under a normal approximation, $\E\big[T^{\mathrm{M}}_a-T^{\mathrm{M}}_b\big]=\theta_a-\theta_b$, so that both gates have the same signal, and that, ignoring the shared control term,
 \begin{equation*}
-\Var\big[T^{\mathrm{M}}_a-T^{\mathrm{M}}_b\big]=\frac{2\sigma^2}{n_1}\Big[\rho+(1-\rho)\,V_K\Big],
+\Var\big[T^{\mathrm{M}}_a-T^{\mathrm{M}}_b\big]=\frac{2\sigma^2}{n_1}\Big[\phi+(1-\phi)\,V_K\Big],
 \end{equation*}
-where $V_K$ is the variance of the minimum of $K$ independent standard normal variables ($V_2=1-1/\pi\approx0.682$, $V_3\approx0.560$, $V_4\approx0.492$). The shared control term does not cancel in the conjunctive difference unless the same endpoint attains both minima; its effect is to push the variance factor from $V_K$ towards $1$ (the single-endpoint value). Matching second moments, the stage-1 sizes needed for a common $\PCS^\ast$ satisfy
+where $V_K$ is the variance of the minimum of $K$ independent standard normal variables ($V_2=1-1/\pi\approx0.682$, $V_3\approx0.560$, $V_4\approx0.492$). The shared control term does not cancel in the conjunctive difference unless the same endpoint attains both minima; its effect is to push the variance factor from $V_K$ towards $1$, the single-endpoint value. Matching second moments, the stage-1 sizes needed for a common $\PCS^\ast$ satisfy
 \begin{equation}\label{eq:bracket}
-\rho+\frac{1-\rho}{K}\;\lesssim\;\frac{n_1^{\mathrm{C}}}{n_1^{\mathrm{M}}}\;\lesssim\;\frac{\rho+(1-\rho)/K}{\rho+(1-\rho)V_K},
+\phi+\frac{1-\phi}{K}\;\lesssim\;\frac{n_1^{\mathrm{C}}}{n_1^{\mathrm{M}}}\;\lesssim\;\frac{\phi+(1-\phi)/K}{\phi+(1-\phi)V_K},
 \end{equation}
-the lower end corresponding to a control-dominated conjunctive gate and the upper end to the idealised one. Since $V_K>1/K$ for all $K\ge2$, the upper end is below one whenever $\rho<1$; the ratio tends to one as $\rho\to1$, when the endpoints carry no independent information, and to $1/(KV_K)$ as $\rho\to0$. For $K=4$ this gives $[0.25,0.51]$ at $\rho=0$, $[0.39,0.67]$ at $\rho=0.19$ and $[0.56,0.80]$ at $\rho=0.41$. Because the minimum of $K$ variables is not normal, \eqref{eq:bracket} is an approximation and is checked by simulation below.
+the lower end corresponding to a control-dominated conjunctive gate and the upper end to the idealised one. Since $V_K>1/K$ for all $K\ge2$, the upper end is below one whenever $\phi<1$; the ratio tends to one as $\phi\to1$, when the endpoints carry no independent information, and to $1/(KV_K)$ as $\phi\to0$. For $K=4$ and the three correlations of the simulation study this gives $[0.25,0.51]$ at $\phi=0$, $[0.40,0.67]$ at $\phi=0.19$ and $[0.56,0.80]$ at $\phi=0.41$ (Table~\ref{tab:main}). The bracket is a heuristic: the minimum of $K$ variables is not normal, the component estimates are not exactly normal, the variances differ across endpoints and arms when the marginals differ, and $\phi$ is a single summary of a dependence structure that the Dirichlet--multinomial model does not reduce to one number. It is wide, and its purpose is to say when and roughly by how much the composite should need less stage-1 data, not to replace the simulation of Section~\ref{sec:selection}, which checks it.
 
 \paragraph{Non-parallel concordant configurations.}
-When dose effects differ across endpoints the two gates no longer share a signal. The composite signal is $\bw^\top(\bm\theta_a-\bm\theta_b)$; the conjunctive signal is, for large $n_1$, the difference on the binding endpoints, $\theta_{a,k_a}-\theta_{b,k_b}$ with $k_a=\arg\min_k\theta_{a,k}$. If the discriminating information is spread across endpoints, the composite gains on both signal and noise. If it is concentrated on the binding endpoint, uniform weights dilute the signal by a factor of order $1/K$ and the conjunctive gate can be superior; calibrated weights that load on that endpoint recover the composite advantage. If the co-primary-optimal dose is optimal only through a trade-off between endpoints, the set of concordant $\bw$ is narrow and the concordant margin small, and the conjunctive gate is expected to dominate.
+When dose effects differ across endpoints the two gates no longer share a signal. The composite signal is $\bw^\top(\bm\theta_a-\bm\theta_b)$; the conjunctive signal is, for large $n_1$, the difference on the binding endpoints, $\theta_{a,k_a}-\theta_{b,k_b}$ with $k_a=\arg\min_k\theta_{a,k}$. If the discriminating information is spread across endpoints, the composite gains on both signal and noise. If it is concentrated on the binding endpoint, uniform weights dilute the signal by a factor of order $1/K$ and the conjunctive gate can be superior; calibrated weights that load on that endpoint recover the composite advantage. If the co-primary-optimal dose is optimal only through a trade-off between endpoints, the set of concordant $\bw$ is narrow and the concordant margin small, and the conjunctive gate is expected to dominate. The four configurations of the simulation study are chosen to exhibit these cases.
 
-\paragraph{Simulation.}
-We take $K=4$, $M=3$, control marginals $\mathbf p_C=(0.425,0.497,0.448,0.434)$ from the vaccine example of Yang et al\cite{yang2024}, binary components generated by a latent Gaussian threshold model with latent equicorrelation $\rho_{\mathrm{latent}}\in\{0,0.3,0.6\}$ (product-moment $\phi\in\{0,0.19,0.41\}$), prior $\balpha_a=\mathbf 1/J$, and $\delta_k=0$. Four configurations are used (Table~\ref{tab:scen}). Both gates rank doses by the same Dirichlet posterior through the normal approximation with exact moments \eqref{eq:moments}; the conjunctive gate ranks by $\min_k$ of the per-endpoint posterior $z$-statistics, the composite gate by the $z$-statistic of $\Delta_a$. Calibrated weights are obtained by \eqref{eq:weights} on a simplex grid of step $0.05$, maximising $\PCS$ at $n_1=100$ on an independent sample of $2{,}000$ trials for the configuration concerned; $\PCS$ is then estimated from $4{,}000$ trials at each of fourteen values of $n_1$ from 25 to 800 (Monte Carlo standard error at most $0.008$), and $n_1$ at $\PCS^\ast=0.8$ is obtained by linear interpolation.
+\section{Simulation study}\label{sec:sim}
+
+\subsection{Set-up}\label{sec:setup}
+
+We take $K=4$, $M=3$, control marginals $\mathbf p_C=(0.425,0.497,0.448,0.434)$ from the vaccine example of Yang et al\cite{yang2024}, binary components generated by a latent Gaussian threshold model with latent equicorrelation $\rho_{\mathrm{lat}}\in\{0,0.3,0.6\}$, corresponding to product-moment correlations $\phi\in\{0,0.19,0.41\}$ between components at the mean control rate, prior $\balpha_a=\mathbf 1/J$, and $\delta_k=0$. Four alternative configurations (Table~\ref{tab:scen}) exhibit the cases of Section~\ref{sec:saving}: parallel effects (S1); effects that differ across endpoints with the two leading doses separated by only $0.01$ on their binding endpoint (S2); dose-discriminating information concentrated on one endpoint (S3); and an optimum that is a trade-off between endpoints (S4). Five null configurations (Table~\ref{tab:nulls}) exercise Theorem~\ref{thm:t1e}: the global null (N0); endpoint 4 null for every dose with endpoints 1--3 as in S1 (N1); doses 1 and 2 null on every endpoint with dose 3 as in S1 (N2); and two staggered nulls in which dose $a$ is null on endpoint $a$ only and has an effect of $0.15$ (N3) or $0.25$ (N4) on the other three. In N0--N2 all doses that are not effective on every endpoint share a null endpoint; in N3 and N4 they do not, and N4 makes the stage-1 ranking under the co-primary gate nearly a ranking of the three null endpoints alone.
 
 \begin{table}
 \centering\footnotesize
-\caption{Dose-effect configurations $\theta_{a,k}=p_{a,k}-p_{C,k}$ ($K=4$, $M=3$). The co-primary-optimal dose is $\arg\max_a\min_k\theta_{a,k}$.}\label{tab:scen}
-\begin{tabular}{llcccccc}
-\toprule
-& & \multicolumn{4}{c}{$\theta_{a,k}$, endpoints $k=1,\dots,4$} & Optimal & Composite-optimal \\
-\cmidrule(lr){3-6}
-Configuration & Dose & 1 & 2 & 3 & 4 & dose & (uniform $\bw$) \\
-\midrule
-S1 parallel & 1 & 0.05 & 0.05 & 0.05 & 0.05 & 3 & 3 \\
- & 2 & 0.10 & 0.10 & 0.10 & 0.10 & & \\
- & 3 & 0.15 & 0.15 & 0.15 & 0.15 & & \\
-\addlinespace[3pt]
-S2 heterogeneous & 1 & 0.04 & 0.06 & 0.03 & 0.05 & 2 & 2 \\
- & 2 & 0.12 & 0.17 & 0.10 & 0.15 & & \\
- & 3 & 0.10 & 0.15 & 0.09 & 0.13 & & \\
-\addlinespace[3pt]
-S3 concentrated & 1 & 0.00 & 0.16 & 0.16 & 0.16 & 3 & 3 \\
- & 2 & 0.07 & 0.16 & 0.16 & 0.16 & & \\
- & 3 & 0.14 & 0.16 & 0.16 & 0.16 & & \\
-\addlinespace[3pt]
-S4 trade-off & 1 & 0.06 & 0.06 & 0.06 & 0.12 & 2 & 3 \\
- & 2 & 0.12 & 0.12 & 0.12 & 0.08 & & \\
- & 3 & 0.18 & 0.18 & 0.18 & $-0.02$ & & \\
-\bottomrule
-\end{tabular}
+\caption{Dose-effect configurations $\theta_{a,k}=p_{a,k}-p_{C,k}$ under the alternative ($K=4$, $M=3$). The co-primary-optimal dose is $\arg\max_a\min_k\theta_{a,k}$.}\label{tab:scen}
+\input{tables/tab_scen}
 \end{table}
 
 \begin{table}
 \centering\footnotesize
+\caption{Null configurations. In N0--N2 every dose that is not effective on all endpoints is null on a common endpoint; in N3 and N4 dose $a$ is null on endpoint $a$ only.}\label{tab:nulls}
+\input{tables/tab_nulls}
+\end{table}
+
+Both gates rank doses by the same Dirichlet posterior through the normal approximation with the exact moments \eqref{eq:moments}: the conjunctive gate by $\min_k z_{a,k}$, with $z_{a,k}$ the posterior $z$-statistic of $p_{a,k}-p_{C,k}$, and the composite gate by the $z$-statistic of $\Delta_a$. Weights are calibrated by \eqref{eq:weights} on a simplex grid of step $0.05$, maximising $\PCS$ at $n_1=100$ and $\rho_{\mathrm{lat}}=0.3$ on an independent sample of $2{,}000$ trials per configuration, in two ways. Configuration-specific weights $\bw^\star(\mathrm{S}j)$ take $\Theta=\{\mathrm{S}j\}$ and are evaluated on $\mathrm{S}j$; they are the best case for that configuration, available only to a designer who knows $\theta$, and are reported to bound what calibration can achieve (Table~\ref{tab:weights}). Jointly calibrated weights apply \eqref{eq:weights} as written to a scenario set: $\Theta_{\mathrm{all}}=\{$S1, S2, S3, S4$\}$, the concordant subset $\Theta_{\mathrm{conc}}=\{$S1, S2, S3$\}$, and each set with the floor $w_k\ge0.1$ on every weight that the design rule of Section~\ref{sec:rule} imposes (Table~\ref{tab:wjoint}), the floored solution being the best grid point that satisfies the floor on the same calibration sample as the free one; every weight vector is then evaluated on every configuration (Table~\ref{tab:cross}). Selection accuracy is measured by $\PCS$ and, because $\PCS$ treats the choice of a nearly equivalent dose as a failure, also by the expected regret $\E[\min_k\theta_{a^\circ,k}-\min_k\theta_{a^\star,k}]$ on the co-primary scale. $\PCS$ curves are estimated from $10{,}000$ trials at each of fourteen values of $n_1$ from 25 to 800 (Monte Carlo standard error at most $0.005$), all gates being evaluated on the same simulated stage-1 data, and $n_1$ at $\PCS^\ast=0.8$ is obtained by linear interpolation, with a delta-method standard error from the slope of the curve on the interpolation segment.
+
+\begin{table}
+\centering\footnotesize
+\caption{Configuration-specific weights $\bw^\star(\mathrm{S}j)$ from \eqref{eq:weights} with $\Theta=\{\mathrm{S}j\}$ at $n_1=100$, and concordance of uniform and calibrated weights with the co-primary-optimal dose. These are best-case weights for each configuration; the end-to-end study uses the vectors obtained at $\rho_{\mathrm{lat}}=0.3$ for S3 and S4.}\label{tab:weights}
+\input{tables/tab_weights}
+\end{table}
+
+The end-to-end study simulates both designs through the interim gate, the futility rule, stage 2 and the final analysis. The reference design applies the co-primary criterion at both stages, ranking by $\min_k z_{a,k}$ and proceeding if $\min_k\Pr(p_{a^\star,k}-p_{C,k}>0\mid\bx^{(1)})\ge\eta$, as in Yang et al\cite{yang2024}; the proposed design ranks and gates on the composite. The final analysis is common to both: one-sided Wald $p$-values per endpoint and stage, the full closed test of Section~\ref{sec:final} with the Simes combination in \eqref{eq:p1J} and \eqref{eq:p2J}, inverse-normal combination with $v_1=\sqrt{n_1/n_{\mathrm{tot}}}$, and the co-primary claim if and only if $H_{a^\star,k}$ is rejected for every endpoint at one-sided $\alpha=0.025$. The per-arm total on $a^\star$ and $C$ is $n_{\mathrm{tot}}$, so $n_2=n_{\mathrm{tot}}-n_1$ and sample size re-estimation is not used; $n_{\mathrm{tot}}=350$ in runs A--C, and run D treats $n_{\mathrm{tot}}$ as a design parameter. The futility boundary $\eta$ is calibrated separately for each gate, weight vector and $n_1$ so that the probability of proceeding under the global null is $0.20$; the two designs are therefore compared at equal behaviour under $H_0$, and the sensitivity of the comparison to this target is examined with targets $0.10$ and $0.30$. Five composite designs are run: uniform weights; the jointly calibrated $\bw^\star(\Theta_{\mathrm{all}})$; the vector the design rule of Section~\ref{sec:rule} selects for the concordant scenario set, $\bw^\star(\Theta_{\mathrm{conc}})$ calibrated with the floor; and the configuration-specific $\bw^\star(\mathrm{S3})=(1,0,0,0)$ and $\bw^\star(\mathrm{S4})=(0.20,0.20,0.10,0.50)$ for S3 and S4, which bound what weights can achieve in those configurations. Power is the probability of a correct claim, that is, a claim on a dose that is effective on every endpoint; a claim on a dose with a true null endpoint is counted as a false claim and not as power. The probability of a claim on the co-primary-optimal dose is also recorded. Each alternative cell uses $10{,}000$ trials (Monte Carlo standard error at most $0.005$ for a probability) and each null cell $40{,}000$ (standard error $0.0008$ for an error rate near $0.025$). Different designs are simulated independently, so the standard error of a difference between two designs in a table is about $0.007$ for a probability near $0.75$. Five runs are reported: (A) equal stage-1 cost, $n_1=100$ per arm, for all alternative and null configurations; a comparison of the three closures of Section~\ref{sec:final} at $n_1=100$; (B) equal selection accuracy, each design at its own $n_1$ from Table~\ref{tab:main}; (C) the frontier of claim probability against expected total sample size as $n_1$ varies from 40 to 200 at fixed $n_{\mathrm{tot}}=350$ and $\rho_{\mathrm{lat}}=0.3$; and (D) the comparison at conventional power, in which $n_1$ and $n_{\mathrm{tot}}$ are both design parameters: every pair on the grid $n_1\in\{30,40,60,80,100,120,150,200\}$, $n_{\mathrm{tot}}\in\{350,400,450,500,600,700,800,1000\}$ is simulated at $\rho_{\mathrm{lat}}=0.3$, and each design is optimised over the pair for a target claim probability of $0.80$, $0.85$ or $0.90$. A separate probe with $200{,}000$ trials per cell measures the finite-sample level of the test in the least favourable null configurations with the futility rule switched off. All results are reproduced by the R code accompanying the paper; the random number streams are fixed per cell, so the tables are reproducible to the digit on any number of cores.
+
+\subsection{Selection stage}\label{sec:selection}
+
+\begin{table}
+\centering\footnotesize
 \caption{Stage-1 sample size per arm at $\PCS^\ast=0.8$ under the conjunctive gate ($n_1^{\mathrm{M}}$) and the composite gate with uniform ($n_1^{\mathrm{C,u}}$) and calibrated ($n_1^{\mathrm{C,c}}$) weights, with ratios to $n_1^{\mathrm{M}}$ and, for S1, the second-moment bracket \eqref{eq:bracket}. Concordance is stated for uniform / calibrated weights. Entries $>800$ did not reach the target within the grid; the corresponding ratios are bounds.}\label{tab:main}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{llcccccccc}
-\toprule
-Configuration & $\rho_{\mathrm{lat}}$ & $\phi$ & Concordant & $n_1^{\mathrm{M}}$ & $n_1^{\mathrm{C,u}}$ & $n_1^{\mathrm{C,c}}$ & $n_1^{\mathrm{C,u}}/n_1^{\mathrm{M}}$ & $n_1^{\mathrm{C,c}}/n_1^{\mathrm{M}}$ & Bracket \eqref{eq:bracket} \\
-\midrule
-S1 parallel & 0.0 & 0.00 & yes / yes & 104 & 41 & 41 & 0.40 & 0.39 & [0.25, 0.51] \\
- & 0.3 & 0.19 & yes / yes & 120 & 65 & 65 & 0.55 & 0.55 & [0.39, 0.67] \\
- & 0.6 & 0.41 & yes / yes & 133 & 92 & 93 & 0.70 & 0.70 & [0.56, 0.80] \\
-S2 heterogeneous & 0.0 & 0.00 & yes / yes & $>800$ & 288 & 280 & $<0.36$ & $<0.35$ &  \\
- & 0.3 & 0.19 & yes / yes & $>800$ & 427 & 393 & $<0.53$ & $<0.49$ &  \\
- & 0.6 & 0.41 & yes / yes & $>800$ & 667 & 582 & $<0.83$ & $<0.73$ &  \\
-S3 concentrated & 0.0 & 0.00 & yes / yes & 202 & 330 & 76 & 1.64 & 0.38 &  \\
- & 0.3 & 0.19 & yes / yes & 199 & 499 & 81 & 2.51 & 0.41 &  \\
- & 0.6 & 0.41 & yes / yes & 186 & 747 & 86 & 4.01 & 0.46 &  \\
-S4 trade-off & 0.0 & 0.00 & no / yes & 262 & $>800$ & $>800$ & $>3.05$ & $>3.05$ &  \\
- & 0.3 & 0.19 & no / yes & 277 & $>800$ & $>800$ & $>2.89$ & $>2.89$ &  \\
- & 0.6 & 0.41 & no / yes & 285 & $>800$ & $>800$ & $>2.80$ & $>2.80$ &  \\
-\bottomrule
-\end{tabular}
+\input{tables/tab_main}
 \end{table}
 
 \begin{figure}
@@ -228,182 +250,125 @@ S4 trade-off & 0.0 & 0.00 & no / yes & 262 & $>800$ & $>800$ & $>3.05$ & $>3.05$
 
 \begin{table}
 \centering\footnotesize
-\caption{Dependence on the number of doses, S1 parallel with adjacent dose effects spaced by 0.05, $\rho_{\mathrm{latent}}=0.3$, uniform weights. $\Delta N=(M-1)(n_1^{\mathrm{M}}-n_1^{\mathrm{C}})$ is the reduction in total sample size implied by \eqref{eq:accounting}.}\label{tab:msweep}
-\begin{tabular}{ccccc}
-\toprule
-$M$ & $n_1^{\mathrm{M}}$ & $n_1^{\mathrm{C}}$ & Ratio & $\Delta N$ \\
-\midrule
-2 & 96 & 55 & 0.57 & 42 \\
-3 & 118 & 63 & 0.54 & 108 \\
-4 & 116 & 64 & 0.55 & 156 \\
-5 & 115 & 62 & 0.54 & 212 \\
-\bottomrule
-\end{tabular}
+\caption{Dependence on the number of doses, S1 parallel with adjacent dose effects spaced by 0.05, $\rho_{\mathrm{lat}}=0.3$, uniform weights. $\Delta N=(M-1)(n_1^{\mathrm{M}}-n_1^{\mathrm{C}})$ is the reduction in total sample size implied by \eqref{eq:accounting}.}\label{tab:msweep}
+\input{tables/tab_msweep}
 \end{table}
 
-Under parallel effects (S1) the composite gate needs 40--70\% of the conjunctive stage-1 size, and the observed ratio lies inside the bracket \eqref{eq:bracket} at each correlation; the saving diminishes as the endpoints become more strongly correlated, since the composite then averages less independent information. Under the heterogeneous plateau configuration (S2) the conjunctive gate does not reach the target within 800 subjects per arm, because the two leading doses are separated by only 0.01 on their binding endpoint, whereas the composite, which pools a separation of 0.0175 across endpoints with lower variance, reaches it at 280--580. Under the concentrated configuration (S3) uniform weights dilute the signal on endpoint 1 and the composite needs 1.6 to 4.0 times the conjunctive size, while calibrated weights, which load 0.85--0.95 on endpoint 1, reduce it to 0.38--0.46 of the conjunctive size. Under the trade-off configuration (S4) uniform weights are discordant and $\PCS$ falls with $n_1$; calibrated weights restore concordance but with a margin of at most about 0.01 on the composite scale, and the composite does not reach the target within the grid while the conjunctive gate does at 260--290. The ratio is stable in $M$ (Table~\ref{tab:msweep}) and the total reduction grows linearly with $M-1$, as \eqref{eq:accounting} implies.
+Table~\ref{tab:main} and Figure~\ref{fig:pcs} give the stage-1 sizes at which each gate reaches $\PCS^\ast=0.8$. Under parallel effects (S1) the composite gate needs 44--73\% of the conjunctive stage-1 size, and the observed ratio lies inside the bracket \eqref{eq:bracket} at each correlation; the saving diminishes as the endpoints become more strongly correlated, since the composite then averages less independent information. Under the heterogeneous configuration (S2) the conjunctive gate does not reach the target within 800 subjects per arm, because the two leading doses are separated by only $0.01$ on their binding endpoint, whereas the composite, which pools a separation of $0.0175$ across endpoints with lower variance, reaches it at 283--618 with uniform weights and 289--546 with configuration-specific weights. Under the concentrated configuration (S3) uniform weights dilute the signal on endpoint 1 and the composite needs 1.8 to 4.2 times the conjunctive size, while configuration-specific weights, which load 0.9--1.0 on endpoint 1, reduce it to 0.44--0.46 of the conjunctive size. Under the trade-off configuration (S4) uniform weights are discordant and $\PCS$ falls with $n_1$; configuration-specific weights restore concordance but with a margin of about $0.01$ on the composite scale, and the composite does not reach the target within the grid while the conjunctive gate does at 261--269. The ratio is stable in $M$ (Table~\ref{tab:msweep}, 0.56--0.61) and the total reduction grows with $M-1$, as \eqref{eq:accounting} implies.
 
-\paragraph{Design rule (preliminary).}
-On the selection-stage evidence alone, the composite gate is adopted only when, over the pre-specified scenario set $\Theta$, (i) $\bw^\star$ from \eqref{eq:weights} is concordant at every $\theta\in\Theta$, and (ii) simulation shows $n_1^{\mathrm{C}}(\bw^\star)<n_1^{\mathrm{M}}$ at the target $\PCS^\ast$ for the scenarios given positive prior weight. Section~\ref{sec:e2e} shows that condition (ii) is necessary but not sufficient and replaces it with a frontier criterion. If the conditions fail, the conjunctive gate is retained; the confirmatory analysis of Sections~\ref{sec:final} and \ref{sec:t1e} is unchanged in either case, since the error-control argument does not depend on the gate. The futility boundary $\eta$ is calibrated separately for whichever gate is used, so that the two designs are compared at equal probability of proceeding under the global null.
+\begin{table}
+\centering\footnotesize
+\caption{Jointly calibrated weights from \eqref{eq:weights} over a scenario set $\Theta$ ($n_1=100$, $\rho_{\mathrm{lat}}=0.3$), with the mean $\PCS$ over $\Theta$ of the resulting composite gate and of the co-primary gate in the cross-evaluation of Table~\ref{tab:cross}. The floored solution is the best grid point satisfying the floor on the same calibration sample as the free one.}\label{tab:wjoint}
+\input{tables/tab_wjoint}
+\end{table}
 
+\begin{table}
+\centering\footnotesize
+\caption{Cross-evaluation at $n_1=100$, $\rho_{\mathrm{lat}}=0.3$: probability of correct selection and expected regret on the co-primary scale, $100\times\E[\min_k\theta_{a^\circ,k}-\min_k\theta_{a^\star,k}]$, for the co-primary gate and for the composite gate with each weight vector, on each configuration ($20{,}000$ trials per cell on common stage-1 data; Monte Carlo standard error of a $\PCS$ at most $0.0035$). Each configuration-specific vector $\bw^\star(\mathrm{S}j)$ is evaluated off its calibration configuration as well as on it.}\label{tab:cross}
+\input{tables/tab_cross}
+\end{table}
+
+The configuration-specific weights of Table~\ref{tab:weights} assume that the designer knows the configuration, so Tables~\ref{tab:wjoint} and~\ref{tab:cross} ask what calibration achieves when they do not. Three findings matter for practice. First, the advantage of the composite gate under S1--S3 is not an artefact of the weights, but it is not unconditional either: on S1 and S2 every weight vector in Table~\ref{tab:cross} except $\bw^\star(\mathrm{S3})$ beats the co-primary gate on both $\PCS$ and regret, and on S3 the two jointly calibrated vectors and $\bw^\star(\mathrm{S3})$ do, whereas uniform weights, $\bw^\star(\mathrm{S4})$ and the floored $\bw^\star(\Theta_{\mathrm{all}})$ do not ($\PCS$ $0.568$, $0.506$ and $0.668$ against $0.676$). In S2 the regret of the co-primary gate is $0.58\times10^{-2}$ against $0.39$--$0.44\times10^{-2}$ for the composite vectors that beat it, so the composite's errors are also less costly. Second, the trade-off configuration S4 is lost for every weight vector: even the configuration-specific $\bw^\star(\mathrm{S4})$ reaches $\PCS=0.46$ against $0.61$ for the co-primary gate, with $40$\% more regret, because the composite must separate doses 2 and 3 through a margin of $0.01$ on the composite scale while the co-primary gate separates them through a margin of $0.10$ on endpoint 4. Third, calibrating jointly over a set that contains S4 produces a compromise, $\bw^\star(\Theta_{\mathrm{all}})=(0.50,0.10,0.00,0.40)$, whose mean $\PCS$ over S1--S4 ($0.651$) falls short of the co-primary gate ($0.665$) because the gain on S1--S3 ($0.73$ against $0.68$) does not pay for the loss on S4; calibrating over the concordant set gives $\bw^\star(\Theta_{\mathrm{conc}})=(0.50,0.20,0.10,0.20)$ and a mean $\PCS$ of $0.742$ against $0.684$ on S1--S3, at the price of $0.26$ on S4. The floor $w_k\ge0.1$ that the design rule of Section~\ref{sec:rule} imposes matters in one case and not in the other. On $\Theta_{\mathrm{all}}$ it moves the vector to $(0.40,0.10,0.10,0.40)$ at a cost of $0.006$ in mean $\PCS$ ($0.645$ against $0.651$), and the floored vector loses to the co-primary gate on S3 as well as on S4, so for $\Theta_{\mathrm{all}}$ condition (1) of the rule fails on two configurations and the conjunctive gate is retained. On $\Theta_{\mathrm{conc}}$ the free optimum already satisfies the floor, so the floored calibration returns the same vector; $\bw^\star(\Theta_{\mathrm{conc}})$ is concordant on S1--S3 and beats the co-primary gate on each of them on both measures ($\PCS$ $0.845$, $0.647$ and $0.733$ against $0.789$, $0.588$ and $0.676$), so for the concordant set condition (1) holds, and this is the vector the rule selects and the composite design carried through the end-to-end study below. The calibrated vectors are themselves estimates from $2{,}000$ trials per configuration and a grid of step $0.05$, and the small differences between, say, $\bw^\star(\Theta_{\mathrm{all}})$ and its floored version in Table~\ref{tab:cross} are within that resolution; what is robust is the ordering of gates within each configuration. These results turn the choice of gate into a question about the scenario set: the composite gate is the better selector when the plausible configurations are concordant, and the co-primary gate when a trade-off between endpoints is a serious possibility, a distinction that Section~\ref{sec:rule} makes operational.
+
+\subsection{Error control}\label{sec:error}
+
+\begin{table}
+\centering\footnotesize
+\caption{Run A, null configurations ($n_1=100$, $40{,}000$ trials per cell): probability of proceeding to stage 2 and probability of a false co-primary claim, by design and latent correlation. The nominal level is $\alpha=0.025$; the Monte Carlo standard error of an error rate near $0.025$ is $0.0008$.}\label{tab:e2eN}
+\input{tables/tab_e2eN}
+\end{table}
+
+\begin{table}
+\centering\scriptsize
+\caption{Three closures at $n_1=100$: the full closed test over dose--endpoint pairs of Section~\ref{sec:final} (``full''), the dose-level closure with intersection--union $p$-values $q^{(1)}_a=\max_kp^{(1)}_{a,k}$ (``dose'', Appendix~\ref{app:union}), and closing each endpoint separately over doses (``endpoint''). Entries are false-claim rates in N1, N3 and N4 ($40{,}000$ trials per cell, standard error $0.0008$) and power in S1 and S3 ($10{,}000$ trials, standard error at most $0.005$). Nominal level $\alpha=0.025$.}\label{tab:closure}
+\input{tables/tab_closure}
+\end{table}
+
+In every null configuration and for every design the false-claim rate of the closed test is at or below $0.025$ within Monte Carlo error (Table~\ref{tab:e2eN}), as Theorem~\ref{thm:t1e} requires; the largest of the 90 estimates is $0.0257$ (N4, co-primary gate, $\rho_{\mathrm{lat}}=0.6$), one standard error above $\alpha$, and the selection functional does not affect the bound. Under the global null the claim is very conservative (at most $0.0001$), since four null endpoints must all be rejected; when the null doses are null on every endpoint (N2) a false claim essentially never occurs, because the effective dose is almost always selected. The configurations that exercise the bound are N1, a single null endpoint shared by all doses with strong effects elsewhere, where the rates are $0.005$--$0.011$, and the staggered nulls N3 and N4, where they are $0.010$--$0.026$ and the bound is attained by the co-primary gate in N4 ($0.024$--$0.026$). The residual conservatism in N1 comes from the closure and the futility rule. In N3 and N4 the binding intersection is the set of the three null pairs, whose stage-1 $p$-values are near-uniform, so the closure costs little, and the co-primary gate, which ranks each dose by the statistic of its own null endpoint, selects the dose whose null endpoint looks best and hands the final analysis a stage-1 $p$-value biased towards rejection; with the large effects of N4 the ranking is almost entirely a ranking of the null endpoints and the test sits at its bound. The composite gates rank on an average over endpoints, select the null endpoint less deliberately, and remain conservative ($0.010$--$0.020$).
+
+\begin{table}
+\centering\footnotesize
+\caption{Finite-sample level of the full closed test with Wald $p$-values in the least favourable configurations: co-primary gate, futility rule switched off so that every trial proceeds, $200{,}000$ trials per cell (Monte Carlo standard error in parentheses). The staggered null with effects $0.35$ is N4 with the three non-null effects raised from $0.25$ to $0.35$.}\label{tab:level}
+\input{tables/tab_level}
+\end{table}
+
+Where the test sits at its bound, the finite-sample size of the Wald test shows through. The one-sided Wald test of two proportions at nominal level $0.025$ has size $0.026$--$0.028$ for two arms of $40$ to $250$ subjects with a common success probability of $0.43$ or $0.50$ (two million pairs of binomial counts per cell), because the normal approximation to a discrete statistic is slightly liberal, and conditions (ii) and (iii) of Theorem~\ref{thm:t1e} hold only up to this approximation. Table~\ref{tab:level} isolates the effect with the futility rule switched off, so that every trial proceeds, the co-primary gate, and $200{,}000$ trials per cell. In N4 itself the rate is $0.0240$; when the three non-null effects are raised to $0.35$, which makes the stage-1 ranking a ranking of the null endpoints alone, it is $0.0254$--$0.0265$, that is, up to $0.0015$ above $\alpha$ and one to four standard errors. This excess is the Wald test's, not the closure's: Theorem~\ref{thm:t1e} is exact for exactly valid $p$-values, and an exact or size-corrected test of each comparison of proportions would remove it, at some cost in power, without any change to the design.
+
+Table~\ref{tab:closure} compares the three closures of Section~\ref{sec:final}. Under N1 all three are below $\alpha$ ($0.005$--$0.018$), since the null endpoint is common to all doses and the true intersection does not depend on the selected dose. Under N3 and N4 the per-endpoint closure gives false-claim rates of $0.045$--$0.055$ with the conjunctive gate and $0.032$--$0.041$ with the composite gate, that is, about twice and $1.3$--$1.6$ times the nominal level, for the reason given in Remark~\ref{rem:perendpoint} and Appendix~\ref{app:counter}; the conjunctive gate inflates more because its ranking statistic for each dose is essentially the statistic of that dose's null endpoint. The full closure holds the rate at $0.014$--$0.026$ and the dose-level closure at $0.014$--$0.025$, both attaining the bound only for the conjunctive gate in N4. Control for every configuration has a price where the non-selected doses are effective but not overwhelmingly so. In S1 the full closure has power $0.66$--$0.68$ with the conjunctive gate and $0.71$--$0.72$ with the composite, against $0.74$--$0.76$ and $0.79$--$0.82$ for the invalid per-endpoint closure, a cost of $0.07$--$0.10$; the dose-level closure, which does not adjust for the $K$ endpoints of the selected dose, sits in between at $0.71$--$0.75$ and $0.78$--$0.80$. In S3 the costs are smaller, $0.02$--$0.06$ for the full closure and $0.01$--$0.04$ for the dose-level one. The composite gate's advantage over the conjunctive gate in S1 shrinks with the correlation under every closure, from $0.06$--$0.09$ at $\rho_{\mathrm{lat}}=0$ to $0.03$--$0.04$ at $\rho_{\mathrm{lat}}=0.6$ ($0.06$, $0.05$ and $0.03$ under the full closure), because the composite then pools less independent information; the closure sets the level of the frontier, the gate its slope.
 
 \subsection{End-to-end operating characteristics}\label{sec:e2e}
 
-The selection-stage comparison of Section~\ref{sec:saving} is completed by simulating both designs through the interim gate, the futility rule, stage 2 and the final analysis. The reference design applies the co-primary criterion at both stages: doses are ranked by $\min_k z_{a,k}$ and the trial proceeds if $\min_k\Pr(p_{a^\star,k}-p_{C,k}>0\mid\bx^{(1)})\ge\eta$, as in Yang et al\cite{yang2024}. The proposed design ranks and gates on the composite. The final analysis is common: one-sided Wald $p$-values per endpoint and stage, Simes closure over doses on the stage-1 component, inverse-normal combination with $v_1=\sqrt{n_1/n_{\mathrm{tot}}}$, and the co-primary claim if and only if every endpoint is rejected at $\alpha=0.025$. The per-arm total on $a^\star$ and $C$ is fixed at $n_{\mathrm{tot}}=350$, so $n_2=n_{\mathrm{tot}}-n_1$ and sample size re-estimation is not used. The futility boundary $\eta$ is calibrated separately for each gate, weight vector and $n_1$ so that the probability of proceeding under the global null is $0.20$; the two designs are therefore compared at equal behaviour under $H_0$. Weights for the composite are uniform for S1 and S2 and, for S3 and S4, the vectors obtained at the selection stage at $\rho_{\mathrm{latent}}=0.3$, namely $\bw^\star(\mathrm{S3})=(0.95,0,0.05,0)$ and $\bw^\star(\mathrm{S4})=(0.20,0.25,0.05,0.50)$. Three null configurations are added: N0, the global null; N1, endpoint 4 null for every dose with endpoints 1--3 as in S1; and N2, doses 1 and 2 null with dose 3 as in S1. Each cell uses $10{,}000$ trials (Monte Carlo standard error at most $0.005$ for a probability, $0.0016$ for an error rate near $0.025$). Three runs are reported: (A) equal stage-1 cost, $n_1=100$ per arm; (B) equal selection accuracy, each design at its own $n_1$ from Table~\ref{tab:main}; and (C) the frontier of claim probability against expected total sample size as $n_1$ varies from 40 to 200, at $\rho_{\mathrm{latent}}=0.3$.
-
 \begin{table}
 \centering\footnotesize
-\caption{Run A, equal stage-1 cost ($n_1=100$): probability of correct selection, probability of the co-primary claim (power) and expected total sample size, by design and latent correlation. False-claim rates in these configurations were at most $0.007$ (S3, where $\theta_{1,1}=0$).}\label{tab:e2eA}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{llccccccccc}
-\toprule
-& & \multicolumn{3}{c}{$\rho_{\mathrm{lat}}=0$} & \multicolumn{3}{c}{$\rho_{\mathrm{lat}}=0.3$} & \multicolumn{3}{c}{$\rho_{\mathrm{lat}}=0.6$} \\
-\cmidrule(lr){3-5}\cmidrule(lr){6-8}\cmidrule(lr){9-11}
-Configuration & Design & PCS & Power & $E[N]$ & PCS & Power & $E[N]$ & PCS & Power & $E[N]$ \\
-\midrule
-S1 parallel & M: co-primary gate & 0.79 & 0.74 & 890 & 0.77 & 0.75 & 879 & 0.76 & 0.75 & 864 \\
- & C: composite, uniform $\mathbf w$ & 0.92 & 0.81 & 900 & 0.87 & 0.80 & 894 & 0.82 & 0.79 & 879 \\
-\addlinespace[3pt]
-S2 heterogeneous & M: co-primary gate & 0.61 & 0.49 & 883 & 0.61 & 0.54 & 866 & 0.59 & 0.55 & 847 \\
- & C: composite, uniform $\mathbf w$ & 0.69 & 0.52 & 899 & 0.65 & 0.55 & 892 & 0.63 & 0.57 & 877 \\
-\addlinespace[3pt]
-S3 concentrated & M: co-primary gate & 0.66 & 0.73 & 894 & 0.66 & 0.73 & 886 & 0.68 & 0.74 & 874 \\
- & C: composite, uniform $\mathbf w$ & 0.62 & 0.68 & 900 & 0.57 & 0.65 & 899 & 0.53 & 0.63 & 893 \\
- & C: composite, $\mathbf w^\star$(S3) & 0.83 & 0.71 & 806 & 0.83 & 0.72 & 809 & 0.82 & 0.72 & 801 \\
-\addlinespace[3pt]
-S4 trade-off & M: co-primary gate & 0.60 & 0.21 & 859 & 0.62 & 0.25 & 831 & 0.62 & 0.29 & 794 \\
- & C: composite, uniform $\mathbf w$ & 0.27 & 0.11 & 899 & 0.29 & 0.13 & 890 & 0.30 & 0.16 & 874 \\
- & C: composite, $\mathbf w^\star$(S4) & 0.47 & 0.18 & 875 & 0.46 & 0.22 & 847 & 0.44 & 0.24 & 820 \\
-\bottomrule
-\end{tabular}
+\caption{Run A, equal stage-1 cost ($n_1=100$, $10{,}000$ trials per cell): probability of proceeding, probability of correct selection, probability of a correct claim (power), probability of a claim on the co-primary-optimal dose, and expected total sample size, by design and latent correlation. False-claim rates in these configurations were at most $0.006$ (S3, where $\theta_{1,1}=0$, and S4, where $\theta_{3,4}<0$).}\label{tab:e2eA}
+\input{tables/tab_e2eA}
 \end{table}
 
-\begin{table}
-\centering\footnotesize
-\caption{Run A, null configurations ($n_1=100$): probability of proceeding to stage 2 and probability of a false co-primary claim, by design and latent correlation. All false-claim rates are below $\alpha=0.025$.}\label{tab:e2eN}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{llcccccc}
-\toprule
-& & \multicolumn{3}{c}{$\Pr(\text{proceed})$} & \multicolumn{3}{c}{$\Pr(\text{false claim})$} \\
-\cmidrule(lr){3-5}\cmidrule(lr){6-8}
-Configuration & Design & $\rho=0$ & $0.3$ & $0.6$ & $\rho=0$ & $0.3$ & $0.6$ \\
-\midrule
-N0 global null & M: co-primary gate & 0.21 & 0.21 & 0.21 & 0.0000 & 0.0000 & 0.0002 \\
- & C: composite, uniform $\mathbf w$ & 0.20 & 0.19 & 0.19 & 0.0000 & 0.0000 & 0.0002 \\
- & C: composite, $\mathbf w^\star$(S3) & 0.19 & 0.20 & 0.20 & 0.0000 & 0.0000 & 0.0001 \\
- & C: composite, $\mathbf w^\star$(S4) & 0.20 & 0.20 & 0.19 & 0.0000 & 0.0000 & 0.0003 \\
-\addlinespace[3pt]
-N1 endpoint-4 null & M: co-primary gate & 0.71 & 0.63 & 0.55 & 0.0103 & 0.0128 & 0.0165 \\
- & C: composite, uniform $\mathbf w$ & 0.98 & 0.93 & 0.85 & 0.0135 & 0.0161 & 0.0142 \\
- & C: composite, $\mathbf w^\star$(S3) & 0.87 & 0.87 & 0.86 & 0.0095 & 0.0127 & 0.0156 \\
- & C: composite, $\mathbf w^\star$(S4) & 0.76 & 0.68 & 0.61 & 0.0140 & 0.0178 & 0.0169 \\
-\addlinespace[3pt]
-N2 doses 1-2 null & M: co-primary gate & 0.95 & 0.93 & 0.89 & 0.0000 & 0.0000 & 0.0000 \\
- & C: composite, uniform $\mathbf w$ & 1.00 & 0.98 & 0.93 & 0.0000 & 0.0000 & 0.0000 \\
- & C: composite, $\mathbf w^\star$(S3) & 0.82 & 0.82 & 0.81 & 0.0000 & 0.0000 & 0.0000 \\
- & C: composite, $\mathbf w^\star$(S4) & 0.99 & 0.96 & 0.92 & 0.0000 & 0.0000 & 0.0000 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{Equal cost (run A).}
+Where the composite carries more dose-discriminating information than the binding endpoint, the advantage at the selection stage carries through to the claim (Table~\ref{tab:e2eA}). In S1 the uniform composite raises $\PCS$ from $0.78$--$0.80$ to $0.82$--$0.92$ and power from $0.64$--$0.67$ to $0.72$--$0.73$ at essentially the same $E[N]$; the rule-selected $\bw^\star(\Theta_{\mathrm{conc}})$ retains more than half of that gain ($\PCS$ $0.81$--$0.89$, power $0.69$--$0.70$) and $\bw^\star(\Theta_{\mathrm{all}})$ about half ($\PCS$ $0.80$--$0.86$, power $0.69$--$0.70$). S2 is included although every design has low power there ($0.37$--$0.47$ at $n_{\mathrm{tot}}=350$), because it is the configuration in which the co-primary gate did not reach $\PCS^\ast$ within the grid of Table~\ref{tab:main}; the composite's gains at the claim are small but in the same direction ($\PCS$ $0.62$--$0.69$ against $0.58$--$0.61$, power higher by $0.01$--$0.05$). In S3 uniform weights lose on both $\PCS$ and power; $\bw^\star(\Theta_{\mathrm{conc}})$ beats the reference on both ($\PCS$ $0.70$--$0.78$ against $0.68$--$0.69$, power $0.71$--$0.75$ against $0.69$--$0.71$) by a margin that shrinks with the correlation, $\bw^\star(\Theta_{\mathrm{all}})$ is better at $\rho_{\mathrm{lat}}\le0.3$ and slightly worse at $0.6$ ($\PCS$ $0.68$--$0.75$, power $0.68$--$0.73$), and the configuration-specific $\bw^\star(\mathrm{S3})$ raises $\PCS$ to $0.83$ but gives power $0.02$--$0.04$ below the reference ($0.65$--$0.67$ against $0.69$--$0.71$) with $E[N]$ lower by about eleven per cent. The difference in $E[N]$ arises because $\bw^\star(\mathrm{S3})$ is a single-endpoint gate and proceeds in $78$\% of trials against $95$--$99$\% for the co-primary gate, whose go decision benefits from the large effects on endpoints 2--4; the same mechanism costs it power. In S4 the reference design is better on every measure: uniform weights and $\bw^\star(\Theta_{\mathrm{conc}})$ are discordant there, and the two vectors calibrated on a set containing S4 are concordant by too small a margin ($\PCS$ $0.23$--$0.49$ against $0.60$--$0.63$). Power is low for every design in S4 ($0.06$--$0.22$) because the optimal dose has a binding effect of only $0.08$ and dose 3, which the composite favours, is null on endpoint 4, so a claim on it counts as a false claim; those rates stay at or below $0.003$.
 
 \begin{table}
 \centering\footnotesize
 \caption{Run B, equal selection accuracy: each design at the $n_1$ giving $\PCS=0.8$ at the selection stage (Table~\ref{tab:main}).}\label{tab:e2eB}
-\begin{tabular}{llcccccc}
-\toprule
-Configuration & $\rho_{\mathrm{lat}}$ & Design & $n_1$ & $\Pr(\text{proceed})$ & PCS & Power & $E[N]$ \\
-\midrule
-S1 parallel & 0.0 & M: co-primary gate & 104 & 0.982 & 0.802 & 0.744 & 899 \\
- & 0.0 & C: composite, uniform $\mathbf w$ & 41 & 0.947 & 0.802 & 0.733 & 749 \\
- & 0.3 & M: co-primary gate & 120 & 0.974 & 0.807 & 0.776 & 928 \\
- & 0.3 & C: composite, uniform $\mathbf w$ & 65 & 0.944 & 0.814 & 0.758 & 798 \\
- & 0.6 & M: co-primary gate & 133 & 0.963 & 0.801 & 0.795 & 950 \\
- & 0.6 & C: composite, uniform $\mathbf w$ & 92 & 0.945 & 0.804 & 0.778 & 856 \\
-\addlinespace[3pt]
-S3 concentrated & 0.0 & M: co-primary gate & 202 & 0.999 & 0.804 & 0.838 & 1104 \\
- & 0.0 & C: composite, $\mathbf w^\star$(S3) & 76 & 0.735 & 0.792 & 0.636 & 707 \\
- & 0.3 & M: co-primary gate & 199 & 0.997 & 0.800 & 0.836 & 1097 \\
- & 0.3 & C: composite, $\mathbf w^\star$(S3) & 81 & 0.754 & 0.802 & 0.656 & 730 \\
- & 0.6 & M: co-primary gate & 186 & 0.992 & 0.807 & 0.840 & 1069 \\
- & 0.6 & C: composite, $\mathbf w^\star$(S3) & 86 & 0.767 & 0.795 & 0.673 & 749 \\
-\bottomrule
-\end{tabular}
+\input{tables/tab_e2eB}
 \end{table}
+
+\paragraph{Sensitivity to the futility target.}
+The boundary $\eta$ was calibrated to $\Pr(\text{proceed}\mid\mathrm{N0})=0.20$; Table~\ref{tab:eta} repeats the S1, S3 and N1 cells at targets $0.10$ and $0.30$. In S1 the comparison is insensitive to the target: the composite gate's advantage in $\PCS$ ($0.87$ against $0.79$) and power ($0.71$--$0.72$ against $0.65$--$0.67$) is the same at each target, and both designs proceed in more than $90$\% of trials. In S3 the target matters, because the single-endpoint composite $\bw^\star(\mathrm{S3})$ proceeds in only $62$\% of trials at target $0.10$ and $85$\% at $0.30$ against $94$--$99$\% for the co-primary gate; its power moves from $0.55$ to $0.71$ and draws level with the reference ($0.70$) at the lenient target, still with a lower $E[N]$ ($826$ against $893$). A gate that concentrates on one endpoint therefore wants a more lenient futility rule than a conjunctive gate, and the target is part of the design comparison rather than a nuisance parameter. Under N1 the false-claim rate is $0.007$--$0.009$ at every target, and the probability of proceeding with an inert component moves from $0.48$ to $0.72$ for the co-primary gate and from $0.84$ to $0.96$ for the uniform composite.
 
 \begin{table}
 \centering\footnotesize
-\caption{Run C, frontier in $n_1$ at $\rho_{\mathrm{latent}}=0.3$: co-primary gate (M) against the composite gate (C; uniform weights in S1, $\bw^\star(\mathrm{S3})$ in S3).}\label{tab:e2eC}
-\begin{tabular}{lccccccc}
-\toprule
-& & \multicolumn{3}{c}{M: co-primary gate} & \multicolumn{3}{c}{C: composite gate} \\
-\cmidrule(lr){3-5}\cmidrule(lr){6-8}
-Configuration & $n_1$ & PCS & Power & $E[N]$ & PCS & Power & $E[N]$ \\
-\midrule
-S1 parallel & 40 & 0.636 & 0.604 & 697 & 0.727 & 0.645 & 687 \\
- & 60 & 0.692 & 0.654 & 748 & 0.791 & 0.740 & 781 \\
- & 80 & 0.746 & 0.716 & 821 & 0.836 & 0.784 & 843 \\
- & 100 & 0.782 & 0.747 & 880 & 0.869 & 0.803 & 894 \\
- & 120 & 0.800 & 0.771 & 928 & 0.894 & 0.821 & 938 \\
- & 150 & 0.841 & 0.789 & 996 & 0.914 & 0.827 & 1000 \\
- & 200 & 0.876 & 0.815 & 1099 & 0.945 & 0.829 & 1100 \\
-\addlinespace[3pt]
-S3 concentrated & 40 & 0.505 & 0.573 & 722 & 0.683 & 0.460 & 509 \\
- & 60 & 0.556 & 0.614 & 772 & 0.750 & 0.572 & 627 \\
- & 80 & 0.620 & 0.683 & 833 & 0.798 & 0.659 & 726 \\
- & 100 & 0.661 & 0.732 & 887 & 0.821 & 0.720 & 807 \\
- & 120 & 0.707 & 0.766 & 931 & 0.853 & 0.759 & 872 \\
- & 150 & 0.753 & 0.803 & 997 & 0.885 & 0.815 & 964 \\
- & 200 & 0.806 & 0.840 & 1099 & 0.912 & 0.862 & 1087 \\
-\bottomrule
-\end{tabular}
+\caption{Sensitivity to the futility target at $n_1=100$, $\rho_{\mathrm{lat}}=0.3$: boundary $\eta$ calibrated to $\Pr(\text{proceed}\mid\mathrm{N0})\in\{0.10,0.20,0.30\}$, with the probability of proceeding, $\PCS$, power (S1, S3) or false-claim rate (N1), and expected total sample size.}\label{tab:eta}
+\input{tables/tab_eta}
+\end{table}
+
+\paragraph{Equal selection accuracy (run B).}
+Matching $n_1$ to $\PCS=0.8$ gives, in S1, an $E[N]$ lower by $8$--$14$\% at a power above the reference by $0.01$--$0.04$ (Table~\ref{tab:e2eB}); the stage-1 saving is realised almost in full. In S3 the composite reaches $\PCS=0.8$ at $n_1\approx79$--$84$, but at that size the null-calibrated futility rule stops an effective drug in $28$--$29$\% of trials and the weak stage-1 component of the combination test costs further power, so $E[N]$ is lower by $33$--$34$\% but power falls from $0.78$--$0.80$ to $0.60$--$0.61$. Equal selection accuracy is therefore not the right basis for choosing $n_1$: the stage-1 size also governs the futility decision and the stage-1 contribution to the confirmatory test.
+
+\begin{table}
+\centering\footnotesize
+\caption{Run C, frontier in $n_1$ at $\rho_{\mathrm{lat}}=0.3$ and fixed $n_{\mathrm{tot}}=350$: co-primary gate (M) against the composite gate with the rule-selected weights $\bw^\star(\Theta_{\mathrm{conc}})$ (C).}\label{tab:e2eC}
+\input{tables/tab_e2eC}
 \end{table}
 
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{sim_e2e_fig.pdf}
-\caption{Run C: probability of the co-primary claim against expected total sample size as $n_1$ varies from 40 to 200 per arm ($\rho_{\mathrm{latent}}=0.3$, $n_{\mathrm{tot}}=350$). A curve lying above and to the left dominates.}\label{fig:frontier}
+\caption{Run D: smallest expected total sample size on the $(n_1,n_{\mathrm{tot}})$ grid at which each design reaches a target probability of the co-primary claim ($\rho_{\mathrm{lat}}=0.3$), by linear interpolation in $n_1$ at each $n_{\mathrm{tot}}$. The lower curve is the more economical design at that target.}\label{fig:frontier}
 \end{figure}
-
-\paragraph{Error control.}
-In every null configuration and for every design the false-claim rate is below $0.025$ (Table~\ref{tab:e2eN}), as the proposition of Section~\ref{sec:t1e} requires; the selection functional does not affect it. Under the global null the intersection--union claim is very conservative (at most $0.0003$), since four null endpoints must all be rejected. The configuration that exercises the bound is N1, a single null endpoint with strong effects elsewhere, where the rates are $0.010$--$0.018$; the residual conservatism comes from the Simes closure and the futility rule.
-
-\paragraph{Equal cost (run A).}
-Where the composite carries more dose-discriminating information than the binding endpoint, the advantage at the selection stage carries through to the claim. In S1 the composite gate raises PCS from $0.76$--$0.79$ to $0.82$--$0.92$ and power from $0.74$--$0.75$ to $0.79$--$0.81$ at essentially the same $E[N]$; in S2 the gains are smaller but in the same direction. In S3 uniform weights lose on both PCS and power, while $\bw^\star(\mathrm{S3})$ raises PCS from $0.66$--$0.68$ to $0.82$--$0.83$ and matches the reference power ($0.71$--$0.72$ against $0.73$--$0.74$) with $E[N]$ lower by about ten per cent, the difference in $E[N]$ arising because the composite gate, which is here nearly a single-endpoint gate, proceeds in $80$--$82$\% of trials against $95$--$99$\% for the co-primary gate, whose go decision benefits from the large effects on endpoints 2--4. In S4 the reference design is better on every measure, with uniform weights discordant and calibrated weights concordant by too small a margin.
-
-\paragraph{Equal selection accuracy (run B).}
-Matching $n_1$ to $\PCS=0.8$ gives, in S1, an $E[N]$ lower by $10$--$17$\% at a power lower by $0.01$--$0.02$; the stage-1 saving is realised almost in full. In S3 the composite reaches $\PCS=0.8$ at $n_1\approx80$, but at that size the null-calibrated futility rule stops an effective drug in $23$--$27$\% of trials and the weak stage-1 component of the combination test costs further power, so $E[N]$ is lower by $30$--$36$\% but power falls from $0.84$ to $0.64$--$0.67$. Equal selection accuracy is therefore not the right basis for choosing $n_1$: the stage-1 size also governs the futility decision and the stage-1 contribution to the confirmatory test.
-
-\paragraph{Frontier (run C).}
-Figure~\ref{fig:frontier} and Table~\ref{tab:e2eC} trace both designs as $n_1$ varies. Read row by row, at equal $n_1$, Table~\ref{tab:e2eC} shows the composite design with a slightly higher $E[N]$ in S1 ($894$ against $880$ at $n_1=100$). This is the futility rule: both gates proceed in $20$\% of trials under the global null, and under the alternative the composite then proceeds more often ($0.987$ against $0.960$ at $n_1=100$), so it spends the stage-2 sample more often. Since $E[N]=(M+1)n_1+2n_2\Pr(\text{proceed})$, fewer false futility stops raise $E[N]$ at fixed $n_1$; the same mechanism is part of the composite's power advantage at equal $n_1$. In S3 the sign reverses ($807$ against $887$), the near-single-endpoint composite proceeding less often. The comparison that matters is at equal power, and Table~\ref{tab:e2eCm} interpolates each frontier at fixed power targets. In S1 the composite reaches the same claim probability with $7$--$15$\% fewer expected subjects, the saving growing with the target because the co-primary gate's curve flattens: power $0.80$ needs $n_1=171$ and $E[N]=1038$ under the co-primary gate against $n_1=96$ and $E[N]=885$ under the composite. In S3 the saving is $5$--$11$\%, and the composite reaches each target at a similar $n_1$ but lower $E[N]$, because it stops more often. The S3 saving is well below the selection-stage ratio of about $0.4$: with $n_{\mathrm{tot}}$ fixed, the stage-1 saving is diluted by the confirmatory sample, and a single-endpoint composite gives a less decisive futility decision than a conjunctive gate when every endpoint responds.
 
 \begin{table}
 \centering\footnotesize
-\caption{Run C at matched power: stage-1 size and expected total sample size needed to reach a target claim probability, by linear interpolation of the frontiers in Table~\ref{tab:e2eC} ($\rho_{\mathrm{latent}}=0.3$).}\label{tab:e2eCm}
-\begin{tabular}{lcccccc}
-\toprule
-& & \multicolumn{2}{c}{M: co-primary gate} & \multicolumn{2}{c}{C: composite gate} & \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}
-Configuration & Target power & $n_1$ & $E[N]$ & $n_1$ & $E[N]$ & $E[N]$ ratio C/M \\
-\midrule
-S1 parallel & 0.65 & 59 & 744 & 41 & 692 & 0.93 \\
- & 0.70 & 75 & 802 & 52 & 742 & 0.92 \\
- & 0.75 & 103 & 887 & 65 & 795 & 0.90 \\
- & 0.80 & 171 & 1038 & 96 & 885 & 0.85 \\
-\addlinespace[3pt]
-S3 concentrated & 0.65 & 70 & 804 & 78 & 716 & 0.89 \\
- & 0.70 & 87 & 851 & 93 & 780 & 0.92 \\
- & 0.75 & 111 & 910 & 115 & 857 & 0.94 \\
- & 0.80 & 147 & 991 & 142 & 939 & 0.95 \\
-\bottomrule
-\end{tabular}
+\caption{Run D, design comparison at conventional power ($\rho_{\mathrm{lat}}=0.3$): for each design, the pair $(n_1,n_{\mathrm{tot}})$ on the grid with the smallest expected total sample size at which the claim probability reaches the target, by linear interpolation in $n_1$ at each $n_{\mathrm{tot}}$, with $E[N]$ there and its ratio to the co-primary gate; delta-method standard errors in parentheses. Minimising over a grid of independently simulated cells is slightly optimistic, for every design alike.}\label{tab:e2eD}
+\input{tables/tab_e2eD}
 \end{table}
 
+\paragraph{Frontier (run C).}
+Table~\ref{tab:e2eC} traces both designs as $n_1$ varies with $n_{\mathrm{tot}}=350$ fixed, the composite carrying the rule-selected weights. Read row by row, at equal $n_1$, the composite design has a slightly higher $E[N]$ in both configurations ($888$ against $881$ in S1 and $891$ against $887$ in S3 at $n_1=100$). This is the futility rule: both gates proceed in $20$\% of trials under the global null, and under the alternative the composite then proceeds more often ($0.976$ against $0.961$ in S1 at $n_1=100$), so it spends the stage-2 sample more often. Since $E[N]=(M+1)n_1+2n_2\Pr(\text{proceed})$, fewer false futility stops raise $E[N]$ at fixed $n_1$; the same mechanism is part of the composite's power advantage at equal $n_1$, which is $0.03$--$0.06$ in S1 and $0.02$--$0.06$ in S3 for $n_1\le120$ and shrinks to $0.02$ and $0.00$ at $n_1=200$. Both frontiers level off: in S1 at $0.71$ for the co-primary gate and $0.72$ for the composite, in S3 at $0.80$ for both at $n_1=200$. With $n_{\mathrm{tot}}$ fixed, the power of the closed test once the right dose has been selected is the ceiling, and a larger $n_1$ buys selection accuracy but not confirmation; $n_{\mathrm{tot}}=350$, under which the per-endpoint closure reached power of about $0.8$ in S1 (Table~\ref{tab:closure}), no longer powers the design under the full closure. A comparison at fixed $n_{\mathrm{tot}}$ therefore measures how closely each design approaches that ceiling rather than what a trial powered to a conventional target would save, and run D removes the ceiling.
+
+\paragraph{Conventional power (run D).}
+Table~\ref{tab:e2eD} and Figure~\ref{fig:frontier} treat $n_1$ and $n_{\mathrm{tot}}$ as design parameters and ask what each design needs to reach a claim probability of $0.80$, $0.85$ or $0.90$. For each $n_{\mathrm{tot}}$ on the grid the frontier in $n_1$ is interpolated at the target, and the $n_{\mathrm{tot}}$ with the smallest interpolated $E[N]$ is taken; the figure traces this minimum over a fine grid of targets. In S1 the composite with uniform weights reaches the three targets with $9$--$12$\% fewer expected subjects than the co-primary gate ($E[N]$ ratios $0.91$, $0.90$ and $0.88$), and with the rule-selected $\bw^\star(\Theta_{\mathrm{conc}})$ with $5$--$9$\% fewer ($0.95$, $0.93$ and $0.91$). The optimal pairs show where the saving comes from: at target $0.80$ both designs choose $n_{\mathrm{tot}}=450$, and the uniform composite needs $n_1=60$ against $99$, so the saving is the stage-1 saving of Section~\ref{sec:saving}, $(M-1)$ times the difference in $n_1$, less the stage-2 sample the composite spends on the trials it does not stop. In S3 the saving is small at every target: $0$--$4$\% with the configuration-specific $\bw^\star(\mathrm{S3})$, which is available only to a designer who knows $\theta$, and $1$--$4$\% with $\bw^\star(\Theta_{\mathrm{conc}})$, the two composite curves in the right panel of Figure~\ref{fig:frontier} being almost indistinguishable from the reference above $0.85$. The delta-method standard error of a ratio is $0.01$--$0.02$, the minimum over independently simulated cells is slightly optimistic for every design, and the grid resolution in $n_{\mathrm{tot}}$ is $50$ or $100$ subjects per arm; a fair summary is a saving of about $10$\% in S1 at conventional power, a little more with uniform weights and a little less with the weights the design rule would actually select, and no material saving in S3. The S3 result is the dilution of Section~\ref{sec:saving} made concrete: a selection-stage ratio of $0.44$--$0.46$ (Table~\ref{tab:main}) becomes a few per cent of $E[N]$ once the stage-1 saving is set against the confirmatory sample and the futility behaviour of a single-endpoint gate.
+
 \paragraph{Futility behaviour under a single null endpoint.}
-Under N1 the co-primary gate proceeds in $55$--$71$\% of trials, the uniform composite in $85$--$98$\%. A composite averages a null component with three positive ones and does not register the failure; the conjunctive gate does. The final analysis protects the error rate in both cases, but the composite design spends the stage-2 sample far more often when one component is inert ($E[N]$ of $827$--$889$ against $677$--$757$). This is the price of the composite gate, and it should be weighed against the selection advantage in any setting where failure on a single component is a realistic outcome.
+Under N1 the co-primary gate proceeds in $55$--$71$\% of trials, the uniform composite in $86$--$98$\%, $\bw^\star(\Theta_{\mathrm{conc}})$ in $86$--$97$\% and $\bw^\star(\Theta_{\mathrm{all}})$ in $69$--$81$\% (Table~\ref{tab:e2eN}). A composite averages a null component with three positive ones and does not register the failure; the conjunctive gate does. The final analysis protects the error rate in both cases, but the composite design spends the stage-2 sample far more often when one component is inert ($E[N]$ of $830$--$890$ against $676$--$754$ for uniform weights). This is the price of the composite gate, and it should be weighed against the selection advantage in any setting where failure on a single component is a realistic outcome.
 
-\paragraph{Revised design rule.}
-The stage-1 size is chosen from the frontier, not from selection accuracy alone: for the pre-specified $\Theta$, $\bw^\star$ from \eqref{eq:weights} must be concordant at every $\theta\in\Theta$; $\eta$ is calibrated under the global null; and $n_1$ is the smallest value at which the composite design attains the target claim probability, with the composite adopted only if its $E[N]$ at that point is below that of the co-primary gate at its own smallest adequate $n_1$. Where the scenario set gives material weight to single-component failure, the expected sample size under that configuration enters the comparison as well.
+\subsection{Design rule}\label{sec:rule}
 
-\subsection{Further operating characteristics}
+The simulation study supports the following rule for deciding between the two gates and fixing $n_1$. For the pre-specified scenario set $\Theta$,
+\begin{enumerate}[label=(\arabic*),leftmargin=*]
+\item the weights $\bw^\star$ from \eqref{eq:weights} over $\Theta$, subject to the clinical constraints $\cW$ and to a floor $w_k\ge w_{\min}$ on every component so that no endpoint is ignored, must be concordant at every $\theta\in\Theta$, and the composite gate with $\bw^\star$ must have the higher $\PCS$ at every $\theta\in\Theta$ in a cross-evaluation of the kind in Table~\ref{tab:cross}; if no such $\bw$ exists, as when $\Theta$ contains a trade-off configuration, the conjunctive gate is retained;
+\item the futility boundary $\eta$ is calibrated for each gate under the global null to a common probability of proceeding;
+\item for each gate, $(n_1,n_{\mathrm{tot}})$ is the pair with the smallest $E[N]$ at which the design attains the target claim probability at the design alternative, read from frontiers of the kind in Table~\ref{tab:e2eD}, not from selection accuracy alone, since the stage-1 size also drives the futility decision and the stage-1 weight in the combination test, and the stage-2 size sets the ceiling of the confirmatory test;
+\item the composite gate is adopted only if its $E[N]$ at that point is below that of the conjunctive gate at its own optimum; where $\Theta$ gives material weight to failure on a single component, the expected sample size under that configuration enters the comparison as well.
+\end{enumerate}
+Whichever gate is chosen, the confirmatory analysis of Sections~\ref{sec:final} and \ref{sec:t1e} is unchanged, since the error-control argument does not depend on the gate. In the vaccine example, where a better formulation tends to be better on every serogroup and the weights can be fixed from disease burden, conditions (1) and (4) are plausible; the single-serogroup shortfall observed by {\O}stergaard et al\cite{ostergaard2009} is the configuration that condition (4) asks the design team to weigh.
 
-Beyond the quantities reported above, the full evaluation covers cell configurations with identical marginals and pairwise dependence but differing higher-order cell mass, since these move the conjunction probability; expected duration; bias and coverage of the pooled and stage-2-only estimates for the selected dose; sample size re-estimation by \eqref{eq:ppos}; and sensitivity to $\bw$, to the prior $\balpha_a$, and to mis-specification of the scenario set $\Theta$.
+\section{Discussion}\label{sec:disc}
+
+The design studied here separates the two jobs a seamless phase II/III trial with co-primary endpoints has to do. Selection asks which dose is most likely to be the best, and a scalar weighted composite of the components, with its posterior computed exactly from the Dirichlet--multinomial model, answers that question with less data than the conjunctive criterion whenever the composite ranks the doses in the same order as the co-primary criterion. Confirmation asks whether the selected dose works on every endpoint, and that question is answered by the co-primary test with the stage-1 data included. Theorem~\ref{thm:t1e} shows that the two jobs can be given to two different functionals without any cost in type I error, provided the confirmatory closed test is taken over all dose--endpoint hypotheses rather than endpoint by endpoint. We regard this last point as of independent interest: a seamless design with co-primary endpoints that closes each endpoint separately over doses, which is the natural extension of the single-endpoint methodology, does not control the false-claim rate when different candidates fail on different endpoints, and the inflation in our staggered null configurations was about twofold for the conjunctive gate. The full closure costs $0.07$--$0.10$ in power relative to that invalid procedure under parallel effects and $0.02$--$0.06$ when the information is concentrated on one endpoint. The dose-level closure of Appendix~\ref{app:union}, built on intersection--union $p$-values, is also valid and recovers most of that difference under parallel effects ($0.7$--$0.9$ of it) and about half of it when the information is concentrated ($0.3$--$0.6$); it protects the co-primary claim only, not per-endpoint statements about the selected dose, and is the natural choice when no such statement will be read from the analysis.
+
+The sample-size advantage of the composite is real but conditional. It is largest when dose effects are parallel and the endpoints are weakly correlated, where the bracket \eqref{eq:bracket} predicts and the simulation confirms a stage-1 saving of a half or more, and it survives the confirmatory stage as a reduction of about $10$\% in expected total sample size at a claim probability of $0.80$--$0.90$, $9$--$12$\% with uniform weights and $5$--$9$\% with the weights the design rule selects, with the futility rule calibrated to equal behaviour under the null and the stage-2 size chosen for each design. It is smaller when the discriminating information sits on one endpoint, where calibrated weights are needed and the composite becomes a single-endpoint gate with a less decisive futility rule; at conventional power the saving there was a few per cent at most, within the resolution of the study, even with weights calibrated on the configuration itself. It is absent, indeed reversed, when the co-primary optimum is a trade-off between endpoints. Concordance of the weights with the co-primary criterion over the scenario set cannot be checked from the data of the trial and has to be argued from external knowledge, which in the vaccine setting is the biology of the carrier-conjugate response and the epidemiology that fixes the weights. Calibration is not a substitute for that knowledge: weights calibrated jointly over a scenario set that contained a trade-off configuration were a compromise that lost to the co-primary gate on average, while calibration over the concordant configurations gained $0.06$ in mean $\PCS$ and lost heavily on the trade-off (Table~\ref{tab:cross}). The design rule of Section~\ref{sec:rule} makes this explicit, requires a floor on every weight, which cost $0.006$ in mean $\PCS$ over $\Theta_{\mathrm{all}}$ and nothing over $\Theta_{\mathrm{conc}}$ in our study, and places failure on a single component, the composite's blind spot, in the scenario set. A composite gate supplemented by a per-endpoint futility check at a lenient level would limit that blind spot at some cost in selection efficiency; the error-control argument covers any such modification.
+
+Several limitations should be noted. The stage-wise $p$-values are Wald $p$-values, valid asymptotically; in the least favourable configurations, where the closed test sits at its bound, the false-claim rate exceeded $\alpha$ by up to $0.0015$, which is the finite-sample size of the Wald test itself (Table~\ref{tab:level}). An exact or size-corrected test of each comparison of proportions would remove this excess, matters more with rare endpoints or small stage-2 samples, and is accommodated by Theorem~\ref{thm:t1e} without change. The Simes combination requires positive regression dependence of the stage-wise statistics across doses and endpoints; this holds under the latent Gaussian dependence used here and is plausible for serogroup responses, but the Bonferroni combination should be used where negative dependence between endpoints is possible. The dependence model is a latent Gaussian threshold model with a single correlation; cell configurations with the same marginals and pairwise correlations but different higher-order structure would move the conjunction probability and the composite variance, and the Dirichlet--multinomial posterior handles them without change, but we have not studied them. The stage-2 sample size was fixed; re-estimation by predictive probability of success, \eqref{eq:ppos}, is covered by the theorem and would improve the frontier of both designs, more so for the design with the better interim information. The futility boundary was calibrated under the global null to a common probability of proceeding; other calibrations, for example to a common probability of stopping under the alternative, would shift both frontiers. Estimation for the selected dose was discussed but not evaluated; the selection bias enters the confirmatory endpoints through a different functional from the one selected on, and its size and the performance of the selection-conditional posterior \eqref{eq:selcond} are a natural subject for further work, as is the use of a hierarchical prior across doses to borrow strength at the selection stage. Finally, the simulation tested superiority; the non-inferiority margins of the motivating trial change the margins $\delta_k$ and $\gamma$ but nothing else, and a re-analysis of the formulation study of {\O}stergaard et al\cite{ostergaard2009} under the licensed margin is the intended next illustration.
+
+

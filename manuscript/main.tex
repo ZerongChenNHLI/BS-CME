@@ -1,8 +1,9 @@
-%% Wiley New Journal Design (NJD) v5 -- settings for Statistics in Medicine /
-%% Pharmaceutical Statistics: AMA reference style, STIX font, single column.
+%% Wiley New Journal Design (NJD) v5 -- settings for Biometrical Journal: STIX font,
+%% single column, numbered (AMA) reference style as supplied with the template.
 %% Compile with XeLaTeX (fontspec loads the bundled STIX fonts from ./Fonts):
-%%   xelatex main; bibtex main; xelatex main; xelatex main
+%%   latexmk -xelatex main        or        xelatex main; bibtex main; xelatex main; xelatex main
 %% On Overleaf: Menu -> Compiler -> XeLaTeX. This cannot be set from within the file.
+%% Tables in tables/ are generated from results/*.csv by R/make_tables.R.
 \RequirePackage{iftex}
 \ifXeTeX\else
   \errmessage{This class needs XeLaTeX. On Overleaf set Menu > Compiler > XeLaTeX}
@@ -18,15 +19,19 @@
 \usepackage{bm}
 \usepackage{booktabs}
 \usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,calc}
 \graphicspath{{figures/}}
 
-%% ---- notation macros (unchanged from the working draft)
+%% ---- notation macros
 \newcommand{\Dir}{\mathrm{Dir}}
 \newcommand{\Beta}{\mathrm{Beta}}
 \newcommand{\Mult}{\mathrm{Multinomial}}
 \newcommand{\E}{\mathbb{E}}
 \renewcommand{\Pr}{\mathrm{Pr}}
 \newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\thmtone}{\ref{thm:t1e}} % wrapper so the uppercased appendix heading keeps the label intact
 \newcommand{\ind}{\mathbf{1}}
 \newcommand{\bpi}{\bm{\pi}}
 \newcommand{\balpha}{\bm{\alpha}}
@@ -37,6 +42,7 @@
 \newcommand{\bY}{\mathbf{Y}}
 \newcommand{\bmm}{\mathbf{m}}
 \newcommand{\cR}{\mathcal{R}}
+\newcommand{\cJ}{\mathcal{J}}
 \newcommand{\cA}{\mathcal{A}}
 \newcommand{\cW}{\mathcal{W}}
 \newcommand{\cC}{\mathcal{C}}
@@ -48,7 +54,7 @@
 \received{Added at production}
 \revised{Added at production}
 \accepted{Added at production}
-\journal{Statistics in Medicine}
+\journal{Biometrical Journal}
 \volume{00}
 \copyyear{2026}
 \startpage{1}
@@ -68,11 +74,11 @@
 
 \corres{Zerong Chen, National Heart and Lung Institute, Imperial College London, London, United Kingdom. \email{z.chen@imperial.ac.uk}}
 
-\abstract[Abstract]{Confirmatory trials with $K$ binary co-primary endpoints require every endpoint to succeed, so the type II error inflates with $K$ and the sample size rises accordingly. In a seamless phase II/III dose-optimisation design this cost is paid once per candidate dose at the selection stage. We propose a design in which the $M$ doses are compared at the interim on a single pre-specified weighted composite of the binary components, and the selected dose is confirmed on the full co-primary criterion with the stage-1 data included. Both functionals are projections of the same Dirichlet--multinomial cell-probability vector, so the inter-endpoint dependence is determined by the model rather than assumed. We show that the co-primary false-claim rate is controlled at level $\alpha$ for any selection rule, futility rule and stage-2 sample size, by closed testing over doses within an inverse-normal combination and an intersection--union decision over endpoints; the composite therefore affects power but not the type I error. Under parallel dose effects a second-moment argument brackets the ratio of stage-1 sample sizes needed for a given selection accuracy below one, and we characterise the configurations in which the composite gate fails: discordance between the composite and co-primary optima, and failure on a single component, which a composite registers weakly. In simulation calibrated to a four-serogroup meningococcal vaccine example, the design reaches the same claim probability as a co-primary-gated seamless design with 7--15\% fewer expected subjects when the optimal dose is best on most endpoints, and is inferior when the optimum is a trade-off between endpoints. A design rule based on the power-versus-expected-sample-size frontier is given.}
+\abstract[Abstract]{Confirmatory trials with $K$ binary co-primary endpoints require every endpoint to succeed, so the type II error inflates with $K$ and the sample size rises accordingly. In a seamless phase II/III dose-optimisation design this cost is paid once per candidate dose at the selection stage. We propose a design in which the $M$ doses are compared at the interim on a single pre-specified weighted composite of the binary components, and the selected dose is confirmed on the full co-primary criterion with the stage-1 data included. Both functionals are projections of the same Dirichlet--multinomial cell-probability vector, so the inter-endpoint dependence is determined by the model rather than assumed. We prove that the probability of a false co-primary claim is at most $\alpha$ for every configuration of effects and for any selection rule, futility rule and stage-2 sample size, by a closed test over all dose--endpoint hypotheses with stage-wise $p$-values combined by the inverse-normal rule, computed exactly through a closed-form shortcut; closing each endpoint separately over doses does not control this error, and we quantify the inflation. Under parallel dose effects a second-moment argument brackets the ratio of stage-1 sample sizes needed for a given selection accuracy below one, and we characterise the configurations in which the composite gate fails: discordance between the composite and co-primary optima, and failure on a single component, which a composite registers weakly. In simulation calibrated to a four-serogroup meningococcal vaccine example, the design reaches a claim probability of 0.80--0.90 with about 10\% fewer expected subjects than a co-primary-gated seamless design under parallel dose effects (9--12\% with uniform weights, 5--9\% with the weights the design rule selects), saves little or nothing when the dose-discriminating information is concentrated on one endpoint, and is inferior when the optimum is a trade-off between endpoints. A design rule based on the frontier of claim probability against expected sample size is given.}
 
-\keywords{adaptive seamless design; co-primary endpoints; composite endpoint; Dirichlet--multinomial; dose optimisation; treatment selection}
+\keywords{adaptive seamless design; closed testing; co-primary endpoints; composite endpoint; Dirichlet--multinomial; dose optimisation; treatment selection}
 
-\jnlcitation{\cname{\author{Z. Chen}}. \ctitle{A Bayesian seamless phase II/III dose-optimisation design with a weighted composite selection endpoint and co-primary confirmatory endpoints.} \cjournal{\it Statistics in Medicine} \cvol{2026;00(00):1--18}.}
+\jnlcitation{\cname{\author{Z. Chen}}. \ctitle{A Bayesian seamless phase II/III dose-optimisation design with a weighted composite selection endpoint and co-primary confirmatory endpoints.} \cjournal{\it Biometrical Journal} \cvol{2026;00(00):1--24}.}
 
 \maketitle
 
@@ -88,8 +94,10 @@ None reported.
 The author declares no potential conflict of interests.
 
 \bmsection*{Data availability statement}
-R and Python code reproducing every table and figure is available from the author.
+No new data were created. R code reproducing every table and figure, including the method functions, the simulation configurations and the scripts that generate the tables from the simulation output, is available at \url{https://github.com/ZerongChenNHLI/BS-CME}.
 
 \bibliography{refs}
+
+\input{appendix}
 
 \end{document}
