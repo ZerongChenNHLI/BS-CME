@@ -1,0 +1,84 @@
+%% Schematic of the design (Figure 1). Input from body.tex; requires tikz with
+%% libraries positioning, arrows.meta, shapes.geometric, fit, calc (loaded in main.tex).
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Stealth[length=1.8mm]},
+  arm/.style={draw, rounded corners=1.5pt, minimum width=14mm, minimum height=6.5mm,
+              align=center, fill=black!6, inner sep=2pt},
+  blk/.style={draw, rounded corners=1.5pt, align=center, inner sep=4pt, text width=62mm, fill=white},
+  gate/.style={draw, diamond, aspect=2.6, align=center, inner sep=1pt, fill=black!3},
+  lab/.style={font=\footnotesize\itshape, text=black!65},
+  ptitle/.style={font=\footnotesize\bfseries, text=black!75},
+  pat/.style={draw, minimum width=11mm, minimum height=6mm, inner sep=1pt, font=\scriptsize, align=center},
+  fun/.style={draw, rounded corners=1.5pt, align=center, inner sep=3pt, font=\scriptsize, text width=34mm},
+]
+%% ---------------------------------------------------------------- panel (a)
+\node[ptitle, anchor=west] (pa) at (0,0) {(a) Trial flow};
+% stage 1 arms
+\node[arm, below=8mm of pa.west, anchor=north west, xshift=4mm] (d1) {Dose $d_1$\\ $n_1$};
+\node[arm, right=2mm of d1] (d2) {Dose $d_2$\\ $n_1$};
+\node[right=1mm of d2, font=\small] (dots) {$\cdots$};
+\node[arm, right=1mm of dots] (dM) {Dose $d_M$\\ $n_1$};
+\node[arm, right=2mm of dM, fill=black!12] (c1) {Control\\ $n_1$};
+\node[lab, above=0.8mm of d1.north west, anchor=south west, xshift=-1mm] {Stage 1: randomise $n_1$ subjects to each of $M+1$ arms};
+% posterior
+\node[blk, below=7mm of $(d1.south)!0.5!(c1.south)$] (post)
+  {Dirichlet--multinomial posterior for each arm,\\
+   $\bpi_a\mid\bx_a^{(1)}\sim\Dir(\balpha_a+\bx_a^{(1)})$;\\
+   exact moments of $S_a(\bw)$ and of every $p_{a,k}$ (Appendix~A)};
+% composite gate
+\node[blk, below=4mm of post] (comp)
+  {\textbf{Selection on the composite}\\
+   $G_a=\Pr\big(S_a-S_C>\gamma\mid\bx^{(1)}\big)$,\quad $a^\star=\arg\max_a G_a$};
+\node[gate, below=4mm of comp] (dec) {$G_{a^\star}\ge\eta$?};
+\node[blk, text width=22mm, right=6mm of dec, fill=black!6] (stop) {Stop for\\ futility};
+% stage 2 arms
+\node[arm, below=13mm of dec, xshift=-9mm] (a2) {Dose $a^\star$\\ $n_2$};
+\node[arm, right=2mm of a2, fill=black!12] (c2) {Control\\ $n_2$};
+\node[lab, above=0.8mm of a2.north west, anchor=south west, xshift=-12mm] {Stage 2: randomise $n_2$ subjects to $a^\star$ and control};
+% final analysis
+\node[blk, below=5mm of $(a2.south)!0.5!(c2.south)$] (fin)
+  {\textbf{Confirmation on the co-primary endpoints}\\
+   for each endpoint $k$: stage-1 $p$-value, closed over doses (Simes),\\
+   and stage-2 $p$-value, combined by the inverse-normal rule};
+\node[blk, below=4mm of fin, fill=black!3] (claim)
+  {Claim $a^\star$ iff $H_{a^\star,k}$ is rejected for every $k=1,\dots,K$\\
+   (intersection--union; Theorem~1 bounds the false-claim rate by $\alpha$)};
+% arrows
+\foreach \n in {d1,d2,dM,c1} \draw[->] (\n.south) -- ($(\n.south |- post.north)$);
+\draw[->] (post) -- (comp);
+\draw[->] (comp) -- (dec);
+\draw[->] (dec) -- node[above, lab] {no} (stop);
+\draw[->] (dec) -- node[right, lab, pos=0.35] {yes} ($(dec.south)+(0,-4.5mm)$) -| (a2.north);
+\draw[->] ($(dec.south)+(0,-4.5mm)$) -| (c2.north);
+\foreach \n in {a2,c2} \draw[->] (\n.south) -- ($(\n.south |- fin.north)$);
+\draw[->] (fin) -- (claim);
+% stage-1 data re-used
+\coordinate (ru) at ($(post.east)+(20mm,0)$);
+\draw[->, dashed] (post.east) -- (ru) -- (ru |- fin.east) -- (fin.east);
+\node[lab, align=right, anchor=east] at ($(ru |- a2.east)+(-1.5mm,0)$) {stage-1 data of $a^\star$\\ and control enter\\ the final analysis};
+%% ---------------------------------------------------------------- panel (b)
+\begin{scope}[xshift=104mm]
+\node[ptitle, anchor=west] (pb) at (0,0) {(b) One cell-probability vector, two functionals ($K=2$)};
+\node[lab, below=4mm of pb.west, anchor=north west, text width=70mm] (btxt)
+  {Each subject falls in one of $J=2^K$ response patterns. The arm-level composite used for selection and the
+   marginal success probabilities used for confirmation are both sums of entries of the same vector $\bpi_a$,
+   so one posterior serves both stages and the dependence between endpoints is carried by the shared cells.};
+\node[pat, below=5mm of btxt.south west, anchor=north west, xshift=6mm] (c00) {$(0,0)$\\ $\pi_{a,1}$};
+\node[pat, right=1.5mm of c00] (c10) {$(1,0)$\\ $\pi_{a,2}$};
+\node[pat, right=1.5mm of c10] (c01) {$(0,1)$\\ $\pi_{a,3}$};
+\node[pat, right=1.5mm of c01] (c11) {$(1,1)$\\ $\pi_{a,4}$};
+\node[lab, above=0.5mm of c00.north west, anchor=south west] {cells $(y_1,y_2)$ with probabilities $\pi_{a,j}$};
+\node[fun, text width=27mm, below=7mm of $(c00.south)!0.5!(c10.south)$, xshift=-4mm] (p1) {$p_{a,1}=\pi_{a,2}+\pi_{a,4}$\\ endpoint 1};
+\node[fun, text width=27mm, below=7mm of $(c01.south)!0.5!(c11.south)$, xshift=4mm] (p2) {$p_{a,2}=\pi_{a,3}+\pi_{a,4}$\\ endpoint 2};
+\draw[->] (c10.south) -- (p1.north); \draw[->] (c11.south) -- (p1.north);
+\draw[->] (c01.south) -- (p2.north); \draw[->] (c11.south) -- (p2.north);
+\node[fun, below=6mm of $(p1.south)!0.5!(p2.south)$, text width=46mm, fill=black!3] (S)
+  {\textbf{Selection:} $S_a(\bw)=w_1p_{a,1}+w_2p_{a,2}=\bc(\bw)^\top\bpi_a$\\ one scalar contrast $S_a-S_C$ per dose};
+\draw[->] (p1.south) -- (S.north); \draw[->] (p2.south) -- (S.north);
+\node[fun, below=4mm of S, text width=46mm, fill=black!3] (CP)
+  {\textbf{Confirmation:} $p_{a^\star,k}-p_{C,k}>\delta_k$ for both $k$\\ (co-primary, intersection--union)};
+\draw[->, dashed] (p1.west) -- ++(-3mm,0) |- (CP.west);
+\draw[->, dashed] (p2.east) -- ++(3mm,0) |- (CP.east);
+\end{scope}
+\end{tikzpicture}

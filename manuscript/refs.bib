@@ -1,7 +1,11 @@
-% Verification status (as of drafting, 2026-09-30):
-%   VERIFIED against source: yang2024, li2024 (arXiv), zaslavsky2013 (abstract), ostergaard2009 (abstract)
-%   FROM MEMORY, must be checked against the publisher record before submission:
-%     bauer1994, berger1982, bretz2006, lehmacher1999, marcus1976, posch2005, sarkar1998, thall1995
+% Verification status (2026-10-02):
+%   Every entry below was checked against a publisher record, a PubMed/Crossref/OpenAlex
+%   metadata record or an institutional repository; the "% VERIFIED:" line above each
+%   entry names the source used. yang2024, zaslavsky2013 and li2024 were verified against
+%   the publisher/arXiv pages on 2026-09-30; the remaining entries on 2026-10-02.
+%   Flags: kimani2013 pages 2893-2910 per Crossref/OpenAlex (PMC header says 2893-2901);
+%   friede2011 fifth author written in the Wiley byline form Vald{\'e}s-M{\'a}rquez;
+%   berger1982 uses the JSTOR DOI.
 
 @article{yang2024,
   author  = {Yang, Jiaying and Li, Guochun and Yang, Dongqing and Wu, Juan and Wang, Junqin and Gao, Xingsu and Liu, Pei},
@@ -32,16 +36,20 @@
   note   = {arXiv:2406.00196}
 }
 
+% VERIFIED: https://www.sciencedirect.com/science/article/abs/pii/S0264410X08011912  (DOI added)
 @article{ostergaard2009,
-  author  = {{\O}stergaard, Lars and Lebacq, Eric and Poolman, Jan and Maechler, G{\"u}nther and Boutriau, Dominique},
-  title   = {Immunogenicity, reactogenicity and persistence of meningococcal {A}, {C}, {W}-135 and {Y}-tetanus toxoid candidate conjugate ({MenACWY-TT}) vaccine formulations in adolescents aged 15--25 years},
+  author  = {{\O}stergaard, Lars and Lebacq, Edouard and Poolman, Jan and Maechler, Gudrun and Boutriau, Dominique},
+  title   = {Immunogenicity, reactogenicity and persistence of meningococcal {A}, {C}, {W-135} and {Y}-tetanus toxoid candidate conjugate ({MenACWY-TT}) vaccine formulations in adolescents aged 15--25 years},
   journal = {Vaccine},
   year    = {2009},
   volume  = {27},
   number  = {1},
-  pages   = {161--168}
+  pages   = {161--168},
+  doi     = {10.1016/j.vaccine.2008.08.075}
 }
 
+% VERIFIED: https://arxiv.org/html/1806.11370v1 (ref list: "P. F. Thall, R. Simon, and E. Estey ... Statistics in Medicine, 14(4):357-379, 1995");
+%           https://onlinelibrary.wiley.com/doi/10.1002/sim.4780140404 (title/journal/year/DOI; page blocks fetches)
 @article{thall1995,
   author  = {Thall, Peter F. and Simon, Richard M. and Estey, Elihu H.},
   title   = {Bayesian sequential monitoring designs for single-arm clinical trials with multiple outcomes},
@@ -49,9 +57,14 @@
   year    = {1995},
   volume  = {14},
   number  = {4},
-  pages   = {357--379}
+  pages   = {357--379},
+  doi     = {10.1002/sim.4780140404}
 }
 
+% Each entry is preceded by a "% VERIFIED: <url>" line naming the source
+% VERIFIED: https://ouci.dntb.gov.ua/en/works/9Gk361x9/ (reference list: "Biometrics 50(4):1029-1041, doi 10.2307/2533441");
+%           https://www.scirp.org/reference/referencespapers?referenceid=1370828 (vol/pages/DOI);
+%           https://eprints.whiterose.ac.uk/id/eprint/193995/ (Robertson et al., ref list: "Biometrics 50(4):1029")
 @article{bauer1994,
   author  = {Bauer, Peter and K{\"o}hne, Klaus},
   title   = {Evaluation of experiments with adaptive interim analyses},
@@ -59,9 +72,12 @@
   year    = {1994},
   volume  = {50},
   number  = {4},
-  pages   = {1029--1041}
+  pages   = {1029--1041},
+  doi     = {10.2307/2533441}
 }
 
+% VERIFIED: https://ideas.repec.org/a/bla/biomet/v55y1999i4p1286-1290.html
+%           (also https://ouci.dntb.gov.ua/en/works/7qWQRR5l/ ref list: Biometrics 55(4):1286-1290)
 @article{lehmacher1999,
   author  = {Lehmacher, Walter and Wassmer, Gernot},
   title   = {Adaptive sample size calculations in group sequential trials},
@@ -69,19 +85,26 @@
   year    = {1999},
   volume  = {55},
   number  = {4},
-  pages   = {1286--1290}
+  pages   = {1286--1290},
+  doi     = {10.1111/j.0006-341X.1999.01286.x}
 }
 
+% VERIFIED: https://academic.oup.com/biomet/article-abstract/63/3/655/270960
 @article{marcus1976,
-  author  = {Marcus, Ruth and Peritz, Eric and Gabriel, K. Ruben},
+  author  = {Marcus, Ruth and Peritz, Eric and Gabriel, K. R.},
   title   = {On closed testing procedures with special reference to ordered analysis of variance},
   journal = {Biometrika},
   year    = {1976},
   volume  = {63},
   number  = {3},
-  pages   = {655--660}
+  pages   = {655--660},
+  doi     = {10.1093/biomet/63.3.655}
 }
 
+% VERIFIED: https://eprints.whiterose.ac.uk/id/eprint/230302/ (Robertson et al. 2025, ref list:
+%           "M. Posch, F. Koenig, M. Branson, W. Brannath, C. Dunger-Baldauf, and P. Bauer ... Statistics in Medicine 24, no. 24 (2005): 3697-3714");
+%           https://ouci.dntb.gov.ua/en/works/4zw1Jmal/ (doi 10.1002/sim.2389);
+%           https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.2389
 @article{posch2005,
   author  = {Posch, Martin and Koenig, Franz and Branson, Michael and Brannath, Werner and Dunger-Baldauf, Cornelia and Bauer, Peter},
   title   = {Testing and estimation in flexible group sequential designs with adaptive treatment selection},
@@ -89,19 +112,27 @@
   year    = {2005},
   volume  = {24},
   number  = {24},
-  pages   = {3697--3714}
+  pages   = {3697--3714},
+  doi     = {10.1002/sim.2389}
 }
 
+% VERIFIED: https://eprints.whiterose.ac.uk/id/eprint/198372/ (Robertson et al. 2023, ref list:
+%           "Bretz F, Schmidli H, Konig F, Racine A, Maurer W. ... Biom J. 2006;48(4):623-634. doi:10.1002/bimj.200510232");
+%           https://onlinelibrary.wiley.com/doi/10.1002/bimj.200510232 (title/journal/year/DOI; page itself blocks fetches)
 @article{bretz2006,
   author  = {Bretz, Frank and Schmidli, Heinz and K{\"o}nig, Franz and Racine, Amy and Maurer, Willi},
-  title   = {Confirmatory seamless phase {II/III} clinical trials with hypotheses selection at interim: general concepts},
+  title   = {Confirmatory seamless phase {II/III} clinical trials with hypotheses selection at interim: General concepts},
   journal = {Biometrical Journal},
   year    = {2006},
   volume  = {48},
   number  = {4},
-  pages   = {623--634}
+  pages   = {623--634},
+  doi     = {10.1002/bimj.200510232}
 }
 
+% VERIFIED: https://asu.elsevierpure.com/en/publications/multiparameter-hypothesis-testing-and-acceptance-sampling/
+%           (Technometrics 1982;24(4):295-300; the DOI shown there is the JSTOR DOI 10.2307/1267823.
+%            The Taylor & Francis DOI 10.1080/00401706.1982.10487790 could not be fetched to confirm.)
 @article{berger1982,
   author  = {Berger, Roger L.},
   title   = {Multiparameter hypothesis testing and acceptance sampling},
@@ -109,15 +140,265 @@
   year    = {1982},
   volume  = {24},
   number  = {4},
-  pages   = {295--300}
+  pages   = {295--300},
+  doi     = {10.2307/1267823}
 }
 
+% VERIFIED: https://projecteuclid.org/journals/annals-of-statistics/volume-26/issue-2/Some-probability-inequalities-for-ordered-rm-MTPsb-2-random-variables/10.1214/aos/1028144846.full
+%           (Project Euclid listing: "The Annals of Statistics 1998, Vol. 26, No. 2, 494-504"; page blocks fetches)
+%           and https://arxiv.org/html/2201.09350 (ref list: "Annals of Statistics, 26(2), 494-504")
 @article{sarkar1998,
   author  = {Sarkar, Sanat K.},
-  title   = {Some probability inequalities for ordered {MTP}$_2$ random variables: a proof of the {S}imes conjecture},
+  title   = {Some probability inequalities for ordered {MTP$_2$} random variables: A proof of the {S}imes conjecture},
   journal = {Annals of Statistics},
   year    = {1998},
   volume  = {26},
   number  = {2},
-  pages   = {494--504}
+  pages   = {494--504},
+  doi     = {10.1214/aos/1028144846}
+}
+
+% VERIFIED: https://wrap.warwick.ac.uk/id/eprint/5925 (Statistics in Medicine 2010;29(9):959-971, doi 10.1002/sim.3863)
+@article{stallard2010,
+  author  = {Stallard, Nigel},
+  title   = {A confirmatory seamless phase {II/III} clinical trial design incorporating short-term endpoint information},
+  journal = {Statistics in Medicine},
+  year    = {2010},
+  volume  = {29},
+  number  = {9},
+  pages   = {959--971},
+  doi     = {10.1002/sim.3863}
+}
+
+% VERIFIED: https://wrap.warwick.ac.uk/37349 (Statistics in Medicine 2011;30(13):1528-1540, doi 10.1002/sim.4202; authors
+%           Friede, Parsons, Stallard, Todd, Valdes Marquez, Chataway, Nicholas). The WRAP record lists the fifth author
+%           unaccented as "Valdes Marquez, E."; the Wiley byline uses the accented form given here.
+@article{friede2011,
+  author  = {Friede, Tim and Parsons, Nicholas and Stallard, Nigel and Todd, Susan and Vald{\'e}s-M{\'a}rquez, Elsa and Chataway, Jeremy and Nicholas, Richard},
+  title   = {Designing a seamless phase {II/III} clinical trial using early outcomes for treatment selection: An application in multiple sclerosis},
+  journal = {Statistics in Medicine},
+  year    = {2011},
+  volume  = {30},
+  number  = {13},
+  pages   = {1528--1540},
+  doi     = {10.1002/sim.4202}
+}
+
+% VERIFIED: https://pmc.ncbi.nlm.nih.gov/articles/PMC4283755 (Pharm Stat 2014;13(4):238-246, doi 10.1002/pst.1619);
+%           https://eprints.lancs.ac.uk/id/eprint/73889/ (author full names)
+@article{kunz2014,
+  author  = {Kunz, Cornelia Ursula and Friede, Tim and Parsons, Nicholas and Todd, Susan and Stallard, Nigel},
+  title   = {Data-driven treatment selection for seamless phase {II/III} trials incorporating early-outcome data},
+  journal = {Pharmaceutical Statistics},
+  year    = {2014},
+  volume  = {13},
+  number  = {4},
+  pages   = {238--246},
+  doi     = {10.1002/pst.1619}
+}
+
+% VERIFIED: https://api.crossref.org/works?filter=doi:10.1002/pst.472 (Crossref: Pharmaceutical Statistics vol 10, issue 4, pp 347-356;
+%           Jenkins, Martin; Stone, Andrew; Jennison, Christopher); also https://people.bath.ac.uk/mascj/ and
+%           https://ouci.dntb.gov.ua/en/works/4zw1Jmal/ (ref list "Pharm Stat. 2011;10:347-56")
+@article{jenkins2011,
+  author  = {Jenkins, Martin and Stone, Andrew and Jennison, Christopher},
+  title   = {An adaptive seamless phase {II/III} design for oncology trials with subpopulation selection using correlated survival endpoints},
+  journal = {Pharmaceutical Statistics},
+  year    = {2011},
+  volume  = {10},
+  number  = {4},
+  pages   = {347--356},
+  doi     = {10.1002/pst.472}
+}
+
+% VERIFIED: https://eprints.whiterose.ac.uk/id/eprint/198372/ (Robertson et al. 2023, ref list:
+%           "Stallard N, Todd S. ... Stat Med. 2003;22(5):689-703. doi:10.1002/sim.1362");
+%           https://onlinelibrary.wiley.com/doi/10.1002/sim.1362
+@article{stallard2003,
+  author  = {Stallard, Nigel and Todd, Susan},
+  title   = {Sequential designs for phase {III} clinical trials incorporating treatment selection},
+  journal = {Statistics in Medicine},
+  year    = {2003},
+  volume  = {22},
+  number  = {5},
+  pages   = {689--703},
+  doi     = {10.1002/sim.1362}
+}
+
+% VERIFIED: https://journals.sagepub.com/doi/10.1177/0962280210379035 (SMMR vol 20, issue 6, pp 623-634; print Dec 2011, online Aug 2010)
+@article{stallard2011,
+  author  = {Stallard, Nigel and Todd, Susan},
+  title   = {Seamless phase {II/III} designs},
+  journal = {Statistical Methods in Medical Research},
+  year    = {2011},
+  volume  = {20},
+  number  = {6},
+  pages   = {623--634},
+  doi     = {10.1177/0962280210379035}
+}
+
+% VERIFIED: https://journals.sagepub.com/doi/10.1177/009286150704100105 (Drug Information Journal 2007;41(1):31-46; all 22 authors as listed)
+@article{offen2007,
+  author  = {Offen, Walter and Chuang-Stein, Christy and Dmitrienko, Alex and Littman, Gary and Maca, Jeff and Meyerson, Laura and Muirhead, Robb and Stryszak, Paul and Baddy, Alex and Chen, Kun and Copley-Merriman, Kati and Dere, Willard and Givens, Sam and Hall, David and Henry, David and Jackson, Joseph D. and Krishen, Alok and Liu, Thomas and Ryder, Steve and Sankoh, A. J. and Wang, Julia and Yeh, Chyon-Hwa},
+  title   = {Multiple co-primary endpoints: Medical and statistical solutions. {A} report from the {M}ultiple {E}ndpoints {E}xpert {T}eam of the {P}harmaceutical {R}esearch and {M}anufacturers of {A}merica},
+  journal = {Drug Information Journal},
+  year    = {2007},
+  volume  = {41},
+  number  = {1},
+  pages   = {31--46},
+  doi     = {10.1177/009286150704100105}
+}
+
+% VERIFIED: https://tus.elsevierpure.com/en/publications/sample-size-determination-in-clinical-trials-with-multiple-co-pri-2/
+%           (Statistics in Medicine 2010;29(21):2169-2179, doi 10.1002/sim.3972)
+@article{sozu2010,
+  author  = {Sozu, Takashi and Sugimoto, Tomoyuki and Hamasaki, Toshimitsu},
+  title   = {Sample size determination in clinical trials with multiple co-primary binary endpoints},
+  journal = {Statistics in Medicine},
+  year    = {2010},
+  volume  = {29},
+  number  = {21},
+  pages   = {2169--2179},
+  doi     = {10.1002/sim.3972}
+}
+
+% VERIFIED: https://api.crossref.org/works?filter=doi:10.1002/sim.2604 (Crossref: Statistics in Medicine vol 26, issue 6, pp 1181-1192;
+%           Chuang-Stein, Christy; Stryszak, Paul; Dmitrienko, Alex; Offen, Walter; online-first 2006, print issue 2007)
+@article{chuangstein2007,
+  author  = {Chuang-Stein, Christy and Stryszak, Paul and Dmitrienko, Alex and Offen, Walter},
+  title   = {Challenge of multiple co-primary endpoints: A new approach},
+  journal = {Statistics in Medicine},
+  year    = {2007},
+  volume  = {26},
+  number  = {6},
+  pages   = {1181--1192},
+  doi     = {10.1002/sim.2604}
+}
+
+% VERIFIED: https://biostatcenter.gwu.edu/publications/design-data-monitoring-and-analysis-clinical-trials-co-primary-endpoints-review
+%           (J Biopharm Stat 2018;28(1):28-51, doi 10.1080/10543406.2017.1378668); T&F listing title confirms Vol 28, No 1:
+%           https://www.tandfonline.com/doi/full/10.1080/10543406.2017.1378668
+@article{hamasaki2018,
+  author  = {Hamasaki, Toshimitsu and Evans, Scott R. and Asakura, Koko},
+  title   = {Design, data monitoring, and analysis of clinical trials with co-primary endpoints: A review},
+  journal = {Journal of Biopharmaceutical Statistics},
+  year    = {2018},
+  volume  = {28},
+  number  = {1},
+  pages   = {28--51},
+  doi     = {10.1080/10543406.2017.1378668}
+}
+
+% VERIFIED: https://cris.tau.ac.il/en/publications/the-control-of-the-false-discovery-rate-in-multiple-testing-under/
+%           (Annals of Statistics 2001;29(4):1165-1188, doi 10.1214/aos/1013699998); also arXiv 2201.09350 ref list
+@article{benjamini2001,
+  author  = {Benjamini, Yoav and Yekutieli, Daniel},
+  title   = {The control of the false discovery rate in multiple testing under dependency},
+  journal = {Annals of Statistics},
+  year    = {2001},
+  volume  = {29},
+  number  = {4},
+  pages   = {1165--1188},
+  doi     = {10.1214/aos/1013699998}
+}
+
+% VERIFIED: https://academic.oup.com/biomet/article-abstract/73/3/751/250538
+@article{simes1986,
+  author  = {Simes, R. J.},
+  title   = {An improved {B}onferroni procedure for multiple tests of significance},
+  journal = {Biometrika},
+  year    = {1986},
+  volume  = {73},
+  number  = {3},
+  pages   = {751--754},
+  doi     = {10.1093/biomet/73.3.751}
+}
+
+% VERIFIED: https://ouci.dntb.gov.ua/en/works/7qWQRR5l/ (ref list: "Biometrical Journal, vol. 43, no. 5, pp. 581-589, 2001,
+%           doi 10.1002/1521-4036(200109)43:5<581::AID-BIMJ581>3.0.CO;2-J"); Wiley record:
+%           https://onlinelibrary.wiley.com/doi/abs/10.1002/1521-4036(200109)43:5%3C581::AID-BIMJ581%3E3.0.CO;2-J
+@article{hommel2001,
+  author  = {Hommel, Gerhard},
+  title   = {Adaptive modifications of hypotheses after an interim analysis},
+  journal = {Biometrical Journal},
+  year    = {2001},
+  volume  = {43},
+  number  = {5},
+  pages   = {581--589},
+  doi     = {10.1002/1521-4036(200109)43:5<581::AID-BIMJ581>3.0.CO;2-J}
+}
+
+% VERIFIED: https://pmc.ncbi.nlm.nih.gov/articles/PMC3813981/ (ref list: "J Biopharm Stat 2007;17:1135-1161, doi 10.1080/10543400701645215");
+%           issue 6 from the T&F record title "Vol 17, No 6": https://www.tandfonline.com/doi/full/10.1080/10543400701645215;
+%           https://people.bath.ac.uk/mascj/ (pages/DOI)
+@article{jennison2007,
+  author  = {Jennison, Christopher and Turnbull, Bruce W.},
+  title   = {Adaptive seamless designs: Selection and prospective testing of hypotheses},
+  journal = {Journal of Biopharmaceutical Statistics},
+  year    = {2007},
+  volume  = {17},
+  number  = {6},
+  pages   = {1135--1161},
+  doi     = {10.1080/10543400701645215}
+}
+
+% VERIFIED: https://eprints.whiterose.ac.uk/id/eprint/193995/ and https://eprints.whiterose.ac.uk/id/eprint/230302/
+%           (Robertson et al., ref lists: "Biom J. 50(4):515-527. doi:10.1002/bimj.200810442");
+%           https://onlinelibrary.wiley.com/doi/10.1002/bimj.200810442
+@article{bowden2008,
+  author  = {Bowden, Jack and Glimm, Ekkehard},
+  title   = {Unbiased estimation of selected treatment means in two-stage trials},
+  journal = {Biometrical Journal},
+  year    = {2008},
+  volume  = {50},
+  number  = {4},
+  pages   = {515--527},
+  doi     = {10.1002/bimj.200810442}
+}
+
+% VERIFIED: https://api.crossref.org/works?filter=doi:10.1002/sim.5757 and https://api.openalex.org/works/doi:10.1002/sim.5757
+%           (publisher metadata: Statistics in Medicine vol 32, issue 17, pp 2893-2910).
+%           NOTE: the PMC header (PMC3813981) and the WRAP record (wrap.warwick.ac.uk/id/eprint/55273) give 2893-2901;
+%           the Crossref/OpenAlex publisher data and Wiley-style reference lists give 2893-2910, which is kept here.
+@article{kimani2013,
+  author  = {Kimani, Peter K. and Todd, Susan and Stallard, Nigel},
+  title   = {Conditionally unbiased estimation in phase {II/III} clinical trials with early stopping for futility},
+  journal = {Statistics in Medicine},
+  year    = {2013},
+  volume  = {32},
+  number  = {17},
+  pages   = {2893--2910},
+  doi     = {10.1002/sim.5757}
+}
+
+% VERIFIED: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/optimizing-dosage-human-prescription-drugs-and-biological-products-treatment-oncologic-diseases
+%           (final guidance, August 2024, docket FDA-2022-D-2827, OCE/CDER/CBER; PDF https://www.fda.gov/media/164555/download);
+%           Federal Register notice of availability 9 Aug 2024: https://www.federalregister.gov/documents/2024/08/09/2024-17771/
+% The author field uses an empty last name so that the AMA style prints the corporate author
+% without the trailing space it adds before initials.
+@techreport{fda2024,
+  author      = {{\relax}, {\relax US Food and Drug Administration}},
+  title       = {Optimizing the Dosage of Human Prescription Drugs and Biological Products for the Treatment of Oncologic Diseases},
+  type        = {Guidance for Industry},
+  number      = {Docket FDA-2022-D-2827},
+  institution = {US Department of Health and Human Services, Food and Drug Administration},
+  address     = {Silver Spring, MD},
+  year        = {2024},
+  month       = aug,
+  note        = {Final guidance. \url{https://www.fda.gov/media/164555/download}}
+}
+
+% VERIFIED: https://www.ebi.ac.uk/europepmc/webservices/rest/article/MED/42032920?format=json&resultType=core
+%           (Europe PMC record of PMID 42032920: Liu J, Wang L, Xi D; Biom J 2026;68(3):e70136; doi 10.1002/bimj.70136)
+%           and https://api.openalex.org/works/pmid:42032920 (Jialuo Liu, Lulu Wang, Dong Xi; vol 68, issue 3, e70136; online 24 Apr 2026);
+%           https://onlinelibrary.wiley.com/doi/10.1002/bimj.70136
+@article{liu2026,
+  author  = {Liu, Jialuo and Wang, Lulu and Xi, Dong},
+  title   = {A comparison of methods for treatment selection in seamless phase {II/III} design},
+  journal = {Biometrical Journal},
+  year    = {2026},
+  volume  = {68},
+  number  = {3},
+  pages   = {e70136},
+  doi     = {10.1002/bimj.70136}
 }

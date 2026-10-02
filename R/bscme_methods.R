@@ -221,13 +221,34 @@ simes_p <- function(p) {
 bonferroni_p <- function(p) min(1, length(p) * min(p))
 
 #' Inverse normal combination function (eq. comb).
+#'
+#' p-values are clipped away from 0 and 1 so that a stage-1 p of exactly 0
+#' (zero standard error with a positive difference) combined with a stage-2 p
+#' of exactly 1 does not produce Inf - Inf = NaN.
 inv_normal <- function(p1, p2, v1) {
+  eps <- 1e-12
+  p1 <- pmin(pmax(p1, eps), 1 - eps); p2 <- pmin(pmax(p2, eps), 1 - eps)
   v2 <- sqrt(1 - v1^2)
   pnorm(v1 * qnorm(p1, lower.tail = FALSE) + v2 * qnorm(p2, lower.tail = FALSE),
         lower.tail = FALSE)
 }
 
-#' Co-primary final analysis for one trial.
+#' Co-primary final analysis for one trial (Section final, Theorem 1).
+#'
+#' The hypotheses tested are H_a^U = union_k H_{a,k}, "dose a is not effective
+#' on every endpoint", a = 1, ..., M. Closed testing over doses: for every I
+#' containing the selected dose a*, the intersection H_I^U is tested by an
+#' intersection-union test whose endpoint-k component combines the stage-1
+#' p-value p1[a*, k] with, for each other dose a in I, the stage-1
+#' intersection-union p-value q_a = max_k p1[a, k] for H_a^U, and with the
+#' stage-2 p-value p2[k] of the selected dose (others = "union"). This is the
+#' procedure of the manuscript; it controls the false-claim rate for every
+#' configuration (Appendix B).
+#'
+#' others = "endpoint" closes each endpoint separately, i.e. uses p1[a, k] for
+#' the other doses. That controls the false-claim rate only when all
+#' not-fully-effective doses share a null endpoint, and is kept to quantify the
+#' inflation in configuration N3 of the simulation study.
 #'
 #' @param p1    M x K matrix of stage-1 p-values (dose a vs stage-1 control)
 #' @param p2    length-K stage-2 p-values (selected dose vs stage-2 control)
@@ -235,22 +256,29 @@ inv_normal <- function(p1, p2, v1) {
 #' @param v1    stage-1 combination weight sqrt(n1 / (n1 + n2_plan))
 #' @param alpha one-sided level
 #' @param intersection "simes" or "bonferroni"
+#' @param others "union" (default) or "endpoint", see above
 #' @return list(reject = length-K logical, claim = all(reject), padj = closed-test p)
 final_analysis <- function(p1, p2, sel, v1, alpha = 0.025,
-                           intersection = c("simes", "bonferroni")) {
+                           intersection = c("simes", "bonferroni"),
+                           others = c("union", "endpoint")) {
   intersection <- match.fun(paste0(match.arg(intersection), "_p"))
+  others <- match.arg(others)
   M <- nrow(p1); K <- ncol(p1)
-  others <- setdiff(seq_len(M), sel)
+  rest <- setdiff(seq_len(M), sel)
+  # Every subset of the non-selected doses (combn on indices so that a single
+  # remaining dose is not expanded to 1:dose).
   subsets <- c(list(integer(0)),
-               unlist(lapply(seq_along(others), function(r)
-                 combn(others, r, simplify = FALSE)), recursive = FALSE))
+               unlist(lapply(seq_along(rest), function(r)
+                 lapply(combn(length(rest), r, simplify = FALSE),
+                        function(idx) rest[idx])), recursive = FALSE))
+  q <- apply(p1, 1, max)                                  # stage-1 IU p-value for H_a^U
   padj <- numeric(K)
   for (k in seq_len(K)) {
     # H_{a*,k} is rejected iff every I containing a* is rejected; the
     # adjusted p-value is the maximum combined p-value over those I.
     padj[k] <- max(vapply(subsets, function(s) {
-      I <- c(sel, s)
-      inv_normal(intersection(p1[I, k]), p2[k], v1)
+      p1I <- c(p1[sel, k], if (others == "union") q[s] else p1[s, k])
+      inv_normal(intersection(p1I), p2[k], v1)
     }, numeric(1)))
   }
   reject <- padj <= alpha
@@ -393,21 +421,27 @@ n1_ratio_bracket <- function(K, phi) {
 
 #' Probability of correct selection at the interim, selection only.
 #'
+#' All gates are evaluated on the same simulated stage-1 data (common random
+#' numbers), so differences between gates within a call are paired.
+#'
 #' @param weights named list of weight vectors for composite gates
-#' @return named vector: PCS for "M" (conjunctive) and each composite weight
+#' @return list(pcs = named vector of PCS for "M" (conjunctive) and each
+#'   composite weight, regret = named vector of the expected regret
+#'   E[min_k(theta_{a°,k} - delta_k) - min_k(theta_{a*,k} - delta_k)])
 pcs_selection <- function(pC, theta, n1, rho = 0, weights = list(),
                           nsim = 4000, delta = NULL, alpha0 = NULL) {
   K <- length(pC)
   if (is.null(delta)) delta <- rep(0, K)
-  best <- optimal_dose(theta, delta)
+  crit <- apply(sweep(theta, 2, delta), 1, min)          # co-primary criterion per dose
+  best <- which.max(crit)
   cnt <- simulate_counts(config_cell_probs(pC, theta, rho), n1, nsim)
   mom <- posterior_moments(cnt, alpha0)
-  out <- c(M = mean(select_dose(gate_stats(mom, delta = delta)$zM)$sel == best))
+  sel <- list(M = select_dose(gate_stats(mom, delta = delta)$zM)$sel)
   for (nm in names(weights)) {
-    zC <- gate_stats(mom, w = weights[[nm]], delta = delta)$zC
-    out[nm] <- mean(select_dose(zC)$sel == best)
+    sel[[nm]] <- select_dose(gate_stats(mom, w = weights[[nm]], delta = delta)$zC)$sel
   }
-  out
+  list(pcs = vapply(sel, function(s) mean(s == best), numeric(1)),
+       regret = vapply(sel, function(s) mean(crit[best] - crit[s]), numeric(1)))
 }
 
 #' n1 at which a PCS curve first reaches the target, by linear interpolation.
@@ -430,12 +464,21 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
 #'
 #' @param gate "composite" or "conjunctive"
 #' @param eta  futility boundary (from calibrate_eta)
+#' @param others passed to final_analysis(): "union" (the manuscript's closed
+#'   test) or "endpoint" (per-endpoint closure, for the N3 comparison only)
 #' @return list of operating characteristics:
-#'   proceed, pcs, power (= claim probability), false_claim, EN, and per-trial data
+#'   proceed      probability of proceeding to stage 2
+#'   pcs          probability that the selected dose is the co-primary-optimal dose
+#'   power        probability of a correct claim: the claim is made and the
+#'                selected dose is effective on every endpoint
+#'   claim_opt    probability of a claim on the co-primary-optimal dose
+#'   false_claim  probability of a claim on a dose with some H_{a,k} true
+#'   EN           expected total sample size
+#'   trials       per-trial data
 run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
                       gate = c("composite", "conjunctive"), w = NULL, eta = 0,
                       nsim = 10000, alpha = 0.025, delta = NULL, alpha0 = NULL,
-                      intersection = "simes") {
+                      intersection = "simes", others = "union") {
   gate <- match.arg(gate)
   K <- length(pC); M <- nrow(theta); A <- M + 1
   if (is.null(delta)) delta <- rep(0, K)
@@ -466,15 +509,17 @@ run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
     a <- sd$sel[i]
     xa <- rmultinom(1, n2, cellp[a, ]); xc <- rmultinom(1, n2, cellp[A, ])
     p2 <- wald_p(drop(t(xa) %*% Y), drop(t(xc) %*% Y), n2, n2, delta)
-    fa <- final_analysis(p1[i, , ], p2, a, v1, alpha, intersection)
+    fa <- final_analysis(p1[i, , ], p2, a, v1, alpha, intersection, others)
     claim[i] <- fa$claim
     false_claim[i] <- fa$claim && any(null_true[a, ])
   }
   best <- optimal_dose(theta, delta)
   list(proceed = mean(sd$go),
        pcs = mean(sd$sel == best),
-       power = mean(claim),
+       power = mean(claim & !false_claim),
+       claim_opt = mean(claim & sd$sel == best),
        false_claim = mean(false_claim),
        EN = A * n1 + 2 * n2 * mean(sd$go),
-       trials = data.frame(sel = sd$sel, G = sd$G, go = sd$go, claim = claim))
+       trials = data.frame(sel = sd$sel, G = sd$G, go = sd$go, claim = claim,
+                           false_claim = false_claim))
 }
