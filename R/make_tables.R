@@ -240,7 +240,7 @@ qty <- c(qty, N4 = "false_claim")
 key <- expand.grid(design = c("M", "Cu"), cfg = c("N1", "N3", "N4", "S1", "S3"), stringsAsFactors = FALSE)[, 2:1]
 cells <- t(apply(key, 1, function(k) {
   unlist(lapply(rho_latent, function(r) {
-    vapply(c("endpoint", "union"), function(cz) {
+    vapply(c("full", "union", "endpoint"), function(cz) {
       z <- cl[cl$cfg == k[["cfg"]] & cl$design == k[["design"]] & cl$rho == r & cl$closure == cz, ]
       fmt(z[[qty[k[["cfg"]]]]], if (qty[k[["cfg"]]] == "power") 3 else 4)
     }, character(1))
@@ -249,17 +249,16 @@ cells <- t(apply(key, 1, function(k) {
 rows <- unlist(lapply(unique(key$cfg), function(s) {
   i <- which(key$cfg == s)
   c(row(first_only(cfg_label[key$cfg[i]]),
-        ifelse(qty[key$cfg[i]] == "power", "power", "false claim"),
         design_label[key$design[i]],
         apply(cells[i, , drop = FALSE], 1, paste, collapse = " & ")),
     if (s != tail(unique(key$cfg), 1)) "\\addlinespace[3pt]")
 }))
 emit("tab_closure",
-     c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllcccccc}", "\\toprule",
-       paste("& & &", paste(sprintf("\\multicolumn{2}{c}{$\\rho_{\\mathrm{lat}}=%s$}", fmt(rho_latent, 1)),
-                            collapse = " & "), "\\\\"),
-       "\\cmidrule(lr){4-5}\\cmidrule(lr){6-7}\\cmidrule(lr){8-9}",
-       "Configuration & Quantity & Design & per endpoint & union & per endpoint & union & per endpoint & union \\\\",
+     c("\\setlength{\\tabcolsep}{3pt}", "\\begin{tabular}{llccccccccc}", "\\toprule",
+       paste("& &", paste(sprintf("\\multicolumn{3}{c}{$\\rho_{\\mathrm{lat}}=%s$}", fmt(rho_latent, 1)),
+                          collapse = " & "), "\\\\"),
+       "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\\cmidrule(lr){9-11}",
+       paste("Configuration & Design &", paste(rep("full & dose & endpoint", 3), collapse = " & "), "\\\\"),
        "\\midrule"),
      rows)
 

@@ -39,11 +39,12 @@
 % final analysis
 \node[blk, below=5mm of $(a2.south)!0.5!(c2.south)$] (fin)
   {\textbf{Confirmation on the co-primary endpoints}\\
-   for each endpoint $k$: stage-1 $p$-value, closed over doses (Simes),\\
-   and stage-2 $p$-value, combined by the inverse-normal rule};
+   closed test over all $M\times K$ dose--endpoint hypotheses $H_{a,k}$:\\
+   Simes-combined stage-1 and stage-2 $p$-values for each intersection,\\
+   combined across stages by the inverse-normal rule};
 \node[blk, below=4mm of fin, fill=black!3] (claim)
   {Claim $a^\star$ iff $H_{a^\star,k}$ is rejected for every $k=1,\dots,K$\\
-   (intersection--union; Theorem~1 bounds the false-claim rate by $\alpha$)};
+   (Theorem~1 bounds the false-claim rate by $\alpha$ for every configuration)};
 % arrows
 \foreach \n in {d1,d2,dM,c1} \draw[->] (\n.south) -- ($(\n.south |- post.north)$);
 \draw[->] (post) -- (comp);
@@ -77,7 +78,7 @@
   {\textbf{Selection:} $S_a(\bw)=w_1p_{a,1}+w_2p_{a,2}=\bc(\bw)^\top\bpi_a$\\ one scalar contrast $S_a-S_C$ per dose};
 \draw[->] (p1.south) -- (S.north); \draw[->] (p2.south) -- (S.north);
 \node[fun, below=4mm of S, text width=46mm, fill=black!3] (CP)
-  {\textbf{Confirmation:} $p_{a^\star,k}-p_{C,k}>\delta_k$ for both $k$\\ (co-primary, intersection--union)};
+  {\textbf{Confirmation:} $p_{a^\star,k}-p_{C,k}>\delta_k$ for both $k$\\ (co-primary; closed test over doses and endpoints)};
 \draw[->, dashed] (p1.west) -- ++(-3mm,0) |- (CP.west);
 \draw[->, dashed] (p2.east) -- ++(3mm,0) |- (CP.east);
 \end{scope}

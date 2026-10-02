@@ -233,56 +233,142 @@ inv_normal <- function(p1, p2, v1) {
         lower.tail = FALSE)
 }
 
-#' Co-primary final analysis for one trial (Section final, Theorem 1).
+#' Row-wise Simes / Bonferroni p-values for an nsim x m matrix of p-values.
 #'
-#' The hypotheses tested are H_a^U = union_k H_{a,k}, "dose a is not effective
-#' on every endpoint", a = 1, ..., M. Closed testing over doses: for every I
-#' containing the selected dose a*, the intersection H_I^U is tested by an
-#' intersection-union test whose endpoint-k component combines the stage-1
-#' p-value p1[a*, k] with, for each other dose a in I, the stage-1
-#' intersection-union p-value q_a = max_k p1[a, k] for H_a^U, and with the
-#' stage-2 p-value p2[k] of the selected dose (others = "union"). This is the
-#' procedure of the manuscript; it controls the false-claim rate for every
-#' configuration (Appendix B).
+#' Simes: min_i (m / i) u_(i). Ranks are obtained from column-pair comparisons
+#' (m is at most M * K), which is much faster in R than sorting every row; ties
+#' receive the larger rank, which reproduces the sorted-order formula.
+row_simes <- function(U) {
+  m <- ncol(U)
+  if (m == 1) return(pmin(1, U[, 1]))
+  r <- matrix(0, nrow(U), m)
+  for (c1 in seq_len(m)) for (c2 in seq_len(m)) r[, c1] <- r[, c1] + (U[, c2] <= U[, c1])
+  pmin(1, do.call(pmin, lapply(seq_len(m), function(c1) m * U[, c1] / r[, c1])))
+}
+row_bonferroni <- function(U) pmin(1, ncol(U) * do.call(pmin, lapply(seq_len(ncol(U)), function(c1) U[, c1])))
+
+#' Row-wise sort in decreasing order (nsim x m matrix).
+row_sort_dec <- function(U) {
+  if (ncol(U) == 1) return(U)
+  matrix(U[order(row(U), -U)], nrow = nrow(U), byrow = TRUE)
+}
+
+#' Co-primary final analysis for nsim trials at once (Section final, Theorem 1).
 #'
-#' others = "endpoint" closes each endpoint separately, i.e. uses p1[a, k] for
-#' the other doses. That controls the false-claim rate only when all
-#' not-fully-effective doses share a null endpoint, and is kept to quantify the
-#' inflation in configuration N3 of the simulation study.
+#' closure = "full" (the design of the manuscript): closed test over the M * K
+#' elementary hypotheses H_{a,k}. For an intersection J of dose-endpoint pairs,
+#' the stage-1 p-value is the Simes (or Bonferroni) combination of the stage-1
+#' p-values of every pair in J, the stage-2 p-value is the combination of the
+#' selected dose's stage-2 p-values on the endpoints that J contains for it
+#' (1 if there are none), and the two are combined by the inverse-normal rule.
+#' H_{a*,k} is rejected iff every J containing (a*, k) is rejected; the claim
+#' is made iff H_{a*,k} is rejected for every k. This controls the false-claim
+#' rate for every configuration (Theorem 1, Appendix B).
+#'
+#' The maximum over the 2^{(M-1)K} subsets of the other doses' pairs is taken
+#' in closed form: the combination functions are non-decreasing in each
+#' argument, so for a given number j of other-dose pairs the largest
+#' intersection p-value is attained by the j largest of those p-values. The
+#' adjusted p-value for H_{a*,k} is therefore
+#'   max over J* (subsets of endpoints containing k) and j in 0..(M-1)K of
+#'   C( psi(p1[a*, J*], top_j(others)), psi(p2[J*]) ).
+#'
+#' closure = "union": the dose-level alternative discussed in the manuscript.
+#' The hypotheses are H_a^U = union_k H_{a,k}, each intersection over doses is
+#' tested by an intersection-union test whose endpoint-k component combines
+#' p1[a*, k] with the dose-level p-values q_a = max_k p1[a, k] of the other
+#' doses in the intersection, and the stage-2 p-value is p2[k]. Also valid for
+#' every configuration, and more powerful, but it controls a weaker error rate
+#' (the false-claim rate only, not the family-wise rate over all H_{a,k}).
+#'
+#' closure = "endpoint": closes each endpoint separately over doses, using
+#' p1[a, k] for the other doses. Controls the false-claim rate only when all
+#' not-fully-effective doses share a null endpoint; kept to quantify the
+#' inflation in configurations N3 and N4.
+#'
+#' @param P1    nsim x M x K array of stage-1 p-values (dose a vs stage-1 control)
+#' @param P2    nsim x K matrix of stage-2 p-values (selected dose vs stage-2 control)
+#' @param sel   length-nsim selected dose
+#' @param v1    stage-1 combination weight sqrt(n1 / (n1 + n2_plan))
+#' @param alpha one-sided level
+#' @param intersection "simes" or "bonferroni"
+#' @param closure "full" (default), "union" or "endpoint", see above
+#' @return list(padj = nsim x K adjusted p-values for H_{a*,k}, claim = logical nsim)
+closed_test <- function(P1, P2, sel, v1, alpha = 0.025,
+                        intersection = c("simes", "bonferroni"),
+                        closure = c("full", "union", "endpoint")) {
+  psi <- switch(match.arg(intersection), simes = row_simes, bonferroni = row_bonferroni)
+  closure <- match.arg(closure)
+  nsim <- dim(P1)[1]; M <- dim(P1)[2]; K <- dim(P1)[3]
+  P2 <- matrix(P2, nsim, K)
+  idx <- cbind(seq_len(nsim), sel)
+  p1sel <- vapply(seq_len(K), function(k) P1[cbind(idx, k)], numeric(nsim))   # nsim x K
+  p1sel <- matrix(p1sel, nsim, K)
+  others <- lapply(seq_len(K), function(k) {                                 # per endpoint: nsim x (M-1)
+    o <- vapply(seq_len(M), function(a) P1[, a, k], numeric(nsim))
+    o <- matrix(o, nsim, M)
+    matrix(t(o)[t(col(o) != sel)], nsim, M - 1, byrow = TRUE)
+  })
+  padj <- matrix(0, nsim, K)
+  if (closure == "full") {
+    O <- row_sort_dec(do.call(cbind, others))                                # nsim x (M-1)K, decreasing
+    Jstar <- unlist(lapply(seq_len(K), function(r) combn(K, r, simplify = FALSE)), recursive = FALSE)
+    for (J in Jstar) {
+      p2J <- psi(P2[, J, drop = FALSE])
+      best <- rep(0, nsim)
+      for (j in 0:ncol(O)) {
+        U <- if (j == 0) p1sel[, J, drop = FALSE] else cbind(p1sel[, J, drop = FALSE], O[, seq_len(j), drop = FALSE])
+        best <- pmax(best, inv_normal(psi(U), p2J, v1))
+      }
+      for (k in J) padj[, k] <- pmax(padj[, k], best)
+    }
+  } else {
+    q <- row_sort_dec(do.call(pmax, lapply(seq_len(K), function(k) others[[k]])))  # dose-level q_a, decreasing
+    for (k in seq_len(K)) {
+      Ok <- if (closure == "union") q else row_sort_dec(others[[k]])
+      best <- rep(0, nsim)
+      for (j in 0:ncol(Ok)) {
+        U <- if (j == 0) p1sel[, k, drop = FALSE] else cbind(p1sel[, k], Ok[, seq_len(j), drop = FALSE])
+        best <- pmax(best, inv_normal(psi(U), P2[, k], v1))
+      }
+      padj[, k] <- best
+    }
+  }
+  list(padj = padj, claim = rowSums(padj <= alpha) == K)
+}
+
+#' Co-primary final analysis for one trial: wrapper around closed_test().
 #'
 #' @param p1    M x K matrix of stage-1 p-values (dose a vs stage-1 control)
 #' @param p2    length-K stage-2 p-values (selected dose vs stage-2 control)
 #' @param sel   selected dose
-#' @param v1    stage-1 combination weight sqrt(n1 / (n1 + n2_plan))
-#' @param alpha one-sided level
-#' @param intersection "simes" or "bonferroni"
-#' @param others "union" (default) or "endpoint", see above
 #' @return list(reject = length-K logical, claim = all(reject), padj = closed-test p)
 final_analysis <- function(p1, p2, sel, v1, alpha = 0.025,
                            intersection = c("simes", "bonferroni"),
-                           others = c("union", "endpoint")) {
-  intersection <- match.fun(paste0(match.arg(intersection), "_p"))
-  others <- match.arg(others)
+                           closure = c("full", "union", "endpoint")) {
   M <- nrow(p1); K <- ncol(p1)
-  rest <- setdiff(seq_len(M), sel)
-  # Every subset of the non-selected doses (combn on indices so that a single
-  # remaining dose is not expanded to 1:dose).
-  subsets <- c(list(integer(0)),
-               unlist(lapply(seq_along(rest), function(r)
-                 lapply(combn(length(rest), r, simplify = FALSE),
-                        function(idx) rest[idx])), recursive = FALSE))
-  q <- apply(p1, 1, max)                                  # stage-1 IU p-value for H_a^U
-  padj <- numeric(K)
-  for (k in seq_len(K)) {
-    # H_{a*,k} is rejected iff every I containing a* is rejected; the
-    # adjusted p-value is the maximum combined p-value over those I.
-    padj[k] <- max(vapply(subsets, function(s) {
-      p1I <- c(p1[sel, k], if (others == "union") q[s] else p1[s, k])
-      inv_normal(intersection(p1I), p2[k], v1)
-    }, numeric(1)))
-  }
-  reject <- padj <= alpha
-  list(reject = reject, claim = all(reject), padj = padj)
+  ct <- closed_test(array(p1, c(1, M, K)), matrix(p2, 1, K), sel, v1, alpha,
+                    intersection, closure)
+  padj <- as.vector(ct$padj)
+  list(reject = padj <= alpha, claim = all(padj <= alpha), padj = padj)
+}
+
+#' Reference implementation of the full closure by explicit enumeration of all
+#' 2^(MK) - 1 intersections, for checking closed_test() on small problems.
+final_analysis_enum <- function(p1, p2, sel, v1, alpha = 0.025,
+                                intersection = c("simes", "bonferroni")) {
+  f <- match.fun(paste0(match.arg(intersection), "_p"))
+  M <- nrow(p1); K <- ncol(p1); L <- M * K
+  pa <- rep(seq_len(M), times = K); pk <- rep(seq_len(K), each = M)      # column a + M(k-1)
+  p1v <- as.vector(p1)
+  B <- as.matrix(expand.grid(rep(list(c(FALSE, TRUE)), L)))[-1, , drop = FALSE]
+  cp <- apply(B, 1, function(b) {
+    s1 <- f(p1v[b]); ks <- pk[b & pa == sel]
+    s2 <- if (length(ks)) f(p2[ks]) else 1
+    inv_normal(s1, s2, v1)
+  })
+  padj <- vapply(seq_len(K), function(k) max(cp[B[, sel + M * (k - 1)]]), numeric(1))
+  list(reject = padj <= alpha, claim = all(padj <= alpha), padj = padj)
 }
 
 ## ---------------------------------------------------------------------------
@@ -478,7 +564,7 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
 run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
                       gate = c("composite", "conjunctive"), w = NULL, eta = 0,
                       nsim = 10000, alpha = 0.025, delta = NULL, alpha0 = NULL,
-                      intersection = "simes", others = "union") {
+                      intersection = "simes", closure = "full") {
   gate <- match.arg(gate)
   K <- length(pC); M <- nrow(theta); A <- M + 1
   if (is.null(delta)) delta <- rep(0, K)
@@ -501,17 +587,23 @@ run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
                         matrix(delta, nsim, K, byrow = TRUE))
   }
 
-  # Stage 2 (simulated for every trial; used only where go = TRUE)
+  # Stage 2, for the trials that proceed: counts simulated by selected dose,
+  # per-endpoint p-values against the stage-2 control, closed test on all
+  # proceeding trials at once.
   claim <- logical(nsim)
   null_true <- sweep(theta, 2, delta) <= 0              # H_{a,k} true
   false_claim <- logical(nsim)
-  for (i in which(sd$go)) {
-    a <- sd$sel[i]
-    xa <- rmultinom(1, n2, cellp[a, ]); xc <- rmultinom(1, n2, cellp[A, ])
-    p2 <- wald_p(drop(t(xa) %*% Y), drop(t(xc) %*% Y), n2, n2, delta)
-    fa <- final_analysis(p1[i, , ], p2, a, v1, alpha, intersection, others)
-    claim[i] <- fa$claim
-    false_claim[i] <- fa$claim && any(null_true[a, ])
+  go <- which(sd$go)
+  if (length(go)) {
+    p2 <- matrix(0, length(go), K)
+    for (a in unique(sd$sel[go])) {
+      i <- which(sd$sel[go] == a)
+      xa <- t(rmultinom(length(i), n2, cellp[a, ])); xc <- t(rmultinom(length(i), n2, cellp[A, ]))
+      p2[i, ] <- wald_p(xa %*% Y, xc %*% Y, n2, n2, matrix(delta, length(i), K, byrow = TRUE))
+    }
+    ct <- closed_test(p1[go, , , drop = FALSE], p2, sd$sel[go], v1, alpha, intersection, closure)
+    claim[go] <- ct$claim
+    false_claim[go] <- ct$claim & apply(null_true, 1, any)[sd$sel[go]]
   }
   best <- optimal_dose(theta, delta)
   list(proceed = mean(sd$go),

@@ -4,10 +4,10 @@ Bayesian seamless II/III trial with endpoint switch
 A Bayesian seamless phase II/III dose-optimisation design that selects the dose
 on a pre-specified weighted composite of $K$ binary endpoints and confirms the
 selected dose on the full co-primary criterion, with stage-1 data included. The
-confirmatory analysis is a closed test over doses whose intersection hypotheses
-are tested by intersection–union tests, combined across stages by the
-inverse-normal rule; the paper proves that it controls the false-claim rate for
-every configuration of true effects. Manuscript in preparation for
+confirmatory analysis is a closed test over all dose × endpoint hypotheses with
+stage-wise p-values combined by the inverse-normal rule, computed exactly through
+a closed-form shortcut (`closed_test()`); the paper proves that it controls the
+false-claim rate for every configuration of true effects. Manuscript in preparation for
 *Biometrical Journal*.
 
 ## Repository layout
@@ -43,8 +43,8 @@ cd manuscript && latexmk -xelatex main
 ```
 
 Base R only (≥ 4.0); no packages need installing. The full run takes about
-35 minutes on 4 cores; `Rscript R/run_simulations.R --quick` runs a smoke test
-with a tenth of the replicates in a few minutes. Random-number streams are
+5 minutes on 4 cores; `Rscript R/run_simulations.R --quick` runs a smoke test
+with a tenth of the replicates in about 30 seconds. Random-number streams are
 assigned per cell (L'Ecuyer streams), so the output is identical for every
 value of `BSCME_CORES`. `BSCME_CALIBRATE=0` uses the calibrated weights
 reported in the paper instead of re-deriving them. `make_tables.R` also prints
@@ -60,7 +60,7 @@ quoted in captions.
 | `pcs_curves.csv`, `table_main_n1.csv`, `figures/sim_fig.pdf` | Table tab:main, Figure fig:pcs |
 | `table_msweep.csv` | Table tab:msweep |
 | `e2e_runA.csv` | Tables tab:e2eA (alternatives) and tab:e2eN (null configurations) |
-| `e2e_closure.csv` | union closed test against per-endpoint closure, Table tab:closure |
+| `e2e_closure.csv` | full closure against dose-level and per-endpoint closures, Table tab:closure |
 | `e2e_eta.csv` | sensitivity to the futility-boundary target, Table tab:eta |
 | `e2e_runB.csv` | Table tab:e2eB |
 | `e2e_runC.csv`, `e2e_runC_matched.csv`, `figures/sim_e2e_fig.pdf` | Tables tab:e2eC, tab:e2eCm, Figure fig:frontier |
@@ -95,8 +95,10 @@ run_trial(pC, configs$S1, n1 = 100, n_tot = 350, rho = 0.3,
           gate = "composite", w = w_uniform, eta = eta, nsim = 2000)[1:6]
 
 # Final analysis alone: stage-wise one-sided p-values (M x K and K), selected
-# dose, stage-1 weight; intersection = "simes" or "bonferroni",
-# others = "union" (valid for every configuration) or "endpoint" (not valid)
+# dose, stage-1 weight; intersection = "simes" or "bonferroni"; closure = "full"
+# (the paper's test), "union" (dose-level alternative, also valid) or
+# "endpoint" (per-endpoint closure, not valid). closed_test() does the same
+# for nsim trials at once; final_analysis_enum() enumerates all intersections.
 final_analysis(p1 = matrix(runif(12), 3, 4), p2 = runif(4), sel = 2,
                v1 = sqrt(100 / 350))
 ```

@@ -238,12 +238,12 @@ get_eta <- function(design, n1, rho, target = proceed_null) {
   eta_cache[[key]]
 }
 
-e2e_cell <- function(theta, design, n1, rho, others = "union", nsim = mc$e2e,
+e2e_cell <- function(theta, design, n1, rho, closure = "full", nsim = mc$e2e,
                      target = proceed_null) {
   d <- designs[[design]]
   r <- run_trial(pC, theta, n1, n_tot = n_tot, rho = rho, gate = d$gate,
                  w = design_w(d, rho), eta = get_eta(design, n1, rho, target),
-                 nsim = nsim, alpha = alpha, others = others)
+                 nsim = nsim, alpha = alpha, closure = closure)
   data.frame(design = design, n1 = n1, rho = rho, nsim = nsim, proceed = r$proceed,
              pcs = r$pcs, power = r$power, claim_opt = r$claim_opt,
              false_claim = r$false_claim, EN = r$EN)
@@ -280,18 +280,19 @@ runA <- do.call(rbind, papply(seq_len(nrow(runA_cells)), function(i) {
 }))
 write_out(runA, "e2e_runA.csv")
 
-## Closure comparison (Table tab:closure): the closed test of the manuscript
-## ("union": other doses enter through q_a = max_k p1_{a,k}) against closing
-## each endpoint separately ("endpoint"), on the same configurations at n1 = 100.
+## Closure comparison (Table tab:closure): the full closed test of the manuscript
+## ("full": all M*K dose-endpoint pairs) against the dose-level alternative
+## ("union": other doses enter through q_a = max_k p1_{a,k}) and against closing
+## each endpoint separately ("endpoint", not valid), at n1 = 100.
 say("closure comparison")
 closure_cells <- merge(
   expand.grid(cfg = c("S1", "S3", "N1", "N3", "N4"), design = c("M", "Cu"),
-              others = c("union", "endpoint"), stringsAsFactors = FALSE),
+              closure = c("full", "union", "endpoint"), stringsAsFactors = FALSE),
   data.frame(rho = rho_latent))
 closure <- do.call(rbind, papply(seq_len(nrow(closure_cells)), function(i) {
   g <- closure_cells[i, ]
-  cbind(cfg = g$cfg, closure = g$others,
-        e2e_cell(all_configs[[g$cfg]], g$design, 100, g$rho, others = g$others,
+  cbind(cfg = g$cfg, closure = g$closure,
+        e2e_cell(all_configs[[g$cfg]], g$design, 100, g$rho, closure = g$closure,
                  nsim = cell_nsim(g$cfg)))
 }))
 write_out(closure, "e2e_closure.csv")
@@ -344,6 +345,7 @@ write_out(runC, "e2e_runC.csv")
 ## Matched power: interpolate each frontier at fixed power targets (Table tab:e2eCm)
 ## Delta-method standard errors: SE(power) on the interpolation segment divided
 ## by the slope of power in n1 gives SE(n1); E[N] is linear in n1 on the segment.
+power_targets <- c(0.60, 0.65, 0.70, 0.75)
 interp_at <- function(d, target) {
   d <- d[order(d$n1), ]
   i <- which(d$power >= target)[1]
@@ -359,7 +361,7 @@ interp_at <- function(d, target) {
 matched <- do.call(rbind, lapply(c("S1", "S3"), function(s) {
   dM <- runC[runC$cfg == s & runC$design == "M", ]
   dC <- runC[runC$cfg == s & runC$design != "M", ]
-  do.call(rbind, lapply(c(0.65, 0.70, 0.75, 0.80), function(tp) {
+  do.call(rbind, lapply(power_targets, function(tp) {
     m <- interp_at(dM, tp); cc <- interp_at(dC, tp)
     ratio <- cc["EN"] / m["EN"]
     data.frame(cfg = s, target = tp,
