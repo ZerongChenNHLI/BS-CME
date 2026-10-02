@@ -1,0 +1,16 @@
+# LaTeX build artefacts
+manuscript/*.aux
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.log
+manuscript/*.out
+manuscript/*.fls
+manuscript/*.fdb_latexmk
+manuscript/*.synctex.gz
+manuscript/*.xdv
+manuscript/main.pdf
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
