@@ -195,8 +195,8 @@ is_concordant <- function(theta, w, delta = rep(0, ncol(theta))) {
 }
 
 ## ---------------------------------------------------------------------------
-## Final analysis: closed testing over doses, inverse normal combination,
-## intersection-union over endpoints (Section final, eq. comb)
+## Final analysis: closed testing over dose-endpoint pairs, inverse normal
+## combination, co-primary claim (Section final, eqs. p1J, p2J, comb, rejJ)
 ## ---------------------------------------------------------------------------
 
 #' One-sided Wald p-value for H: p_a - p_C <= delta, per endpoint.
@@ -544,14 +544,17 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
 #'
 #' Stage 1 randomises n1 to each of M doses and control; the gate selects a
 #' dose and decides go/no-go; stage 2 randomises n2 = n_tot - n1 to the
-#' selected dose and control; the final analysis uses Simes closure over
-#' doses, inverse normal combination with v1 = sqrt(n1 / n_tot) and the
-#' intersection-union claim over endpoints.
+#' selected dose and control; the final analysis is the closed test of
+#' closed_test(), by default the full closure over all M*K dose-endpoint
+#' hypotheses, with inverse normal combination, v1 = sqrt(n1 / n_tot), and the
+#' co-primary claim if and only if every H_{a*,k} is rejected.
 #'
 #' @param gate "composite" or "conjunctive"
-#' @param eta  futility boundary (from calibrate_eta)
-#' @param others passed to final_analysis(): "union" (the manuscript's closed
-#'   test) or "endpoint" (per-endpoint closure, for the N3 comparison only)
+#' @param eta  futility boundary (from calibrate_eta); eta = 0 always proceeds
+#' @param intersection "simes" or "bonferroni", passed to closed_test()
+#' @param closure "full" (the manuscript's test), "union" (dose-level closure
+#'   on union hypotheses, Appendix B.2) or "endpoint" (closing each endpoint
+#'   separately over doses; not valid, Table tab:closure only)
 #' @return list of operating characteristics:
 #'   proceed      probability of proceeding to stage 2
 #'   pcs          probability that the selected dose is the co-primary-optimal dose

@@ -33,8 +33,10 @@ dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 ##   pcs      selection-stage PCS curves          cross     cross-evaluation of weights
 ##   calib    weight calibration                  e2e       end-to-end cells, alternatives
 ##   e2e_null end-to-end cells, null configurations (error rates)
-##   eta      futility-boundary calibration
-mc <- list(pcs = 10000, calib = 2000, cross = 20000, e2e = 10000, e2e_null = 40000, eta = 10000)
+##   eta      futility-boundary calibration     probe    finite-sample level probe
+##   wald     size of the one-sided Wald test
+mc <- list(pcs = 10000, calib = 2000, cross = 20000, e2e = 10000, e2e_null = 40000, eta = 10000,
+           probe = 200000, wald = 2000000)
 if (quick) mc <- lapply(mc, function(x) x %/% 10)
 
 ## Reproducible parallelism: job i always runs on the i-th L'Ecuyer stream after
@@ -99,17 +101,27 @@ w_star <- function(cfg, rho) unlist(w_table[w_table$cfg == cfg & w_table$rho == 
 ##     (Tables tab:wjoint and tab:cross; rho = 0.3, n1 = 100)
 ## ---------------------------------------------------------------------------
 say("joint calibration")
+joint_free <- papply(theta_sets, function(set)
+  calibrate_weights(configs[set], pC, n1 = 100, rho = 0.3, nsim = mc$calib))
+names(joint_free) <- names(theta_sets)
+## The floored solution is read from the same calibration sample as the free
+## one: the best grid point with every weight >= w_floor. When the free optimum
+## already satisfies the floor, the two coincide.
+floor_best <- function(res, floor) {
+  a <- res$all
+  feas <- apply(a[, 1:K], 1, function(w) all(w >= floor - 1e-9))
+  i <- which(feas)[which.max(a$pcs[feas])]
+  list(w = as.numeric(a[i, 1:K]), pcs = a$pcs[i])
+}
 joint_specs <- list(
-  all        = list(set = theta_sets$all,        floor = 0),
-  concordant = list(set = theta_sets$concordant, floor = 0),
-  all_floor  = list(set = theta_sets$all,        floor = w_floor)
+  all              = list(set = theta_sets$all,        floor = 0),
+  concordant       = list(set = theta_sets$concordant, floor = 0),
+  all_floor        = list(set = theta_sets$all,        floor = w_floor),
+  concordant_floor = list(set = theta_sets$concordant, floor = w_floor)
 )
-wjoint <- papply(joint_specs, function(sp) {
-  cons <- if (sp$floor > 0) function(w) all(w >= sp$floor - 1e-9) else NULL
-  calibrate_weights(configs[sp$set], pC, n1 = 100, rho = 0.3, nsim = mc$calib,
-                    constraint = cons)
-})
-names(wjoint) <- names(joint_specs)
+wjoint <- list(all = joint_free$all, concordant = joint_free$concordant,
+               all_floor = floor_best(joint_free$all, w_floor),
+               concordant_floor = floor_best(joint_free$concordant, w_floor))
 w_joint_table <- data.frame(
   set = names(joint_specs),
   scenarios = sapply(joint_specs, function(sp) paste(sp$set, collapse = "+")),
@@ -120,8 +132,8 @@ names(w_joint_table)[4:7] <- paste0("w", 1:4)
 write_out(w_joint_table, "weights_joint.csv")
 
 cross_w <- list(Cu = w_uniform, Cj_all = wjoint$all$w, Cj_conc = wjoint$concordant$w,
-                Cj_floor = wjoint$all_floor$w, Cc_S3 = w_star("S3", 0.3),
-                Cc_S4 = w_star("S4", 0.3))
+                Cj_floor = wjoint$all_floor$w, Cj_cfloor = wjoint$concordant_floor$w,
+                Cc_S3 = w_star("S3", 0.3), Cc_S4 = w_star("S4", 0.3))
 cross <- papply(names(configs), function(s) {
   r <- pcs_selection(pC, configs[[s]], 100, 0.3, weights = cross_w, nsim = mc$cross)
   data.frame(cfg = s, gate = names(r$pcs), pcs = unname(r$pcs), regret = unname(r$regret))
@@ -215,14 +227,18 @@ write_out(msweep, "table_msweep.csv")
 ##   M      conjunctive (co-primary) gate
 ##   Cu     composite, uniform weights
 ##   Cj     composite, weights calibrated jointly over S1-S4 (rho = 0.3)
+##   Cj_conc composite, weights calibrated jointly over the concordant set S1-S3
+##          subject to the floor w_k >= w_floor: the vector the design rule of
+##          Section rule selects for that scenario set
 ##   Cc_S3  composite, weights calibrated on S3 alone (best case for S3)
 ##   Cc_S4  composite, weights calibrated on S4 alone (best case for S4)
 designs <- list(
-  M     = list(gate = "conjunctive", w = NULL),
-  Cu    = list(gate = "composite", w = w_uniform),
-  Cj    = list(gate = "composite", w = wjoint$all$w),
-  Cc_S3 = list(gate = "composite", w = function(rho) w_star("S3", 0.3)),
-  Cc_S4 = list(gate = "composite", w = function(rho) w_star("S4", 0.3))
+  M       = list(gate = "conjunctive", w = NULL),
+  Cu      = list(gate = "composite", w = w_uniform),
+  Cj      = list(gate = "composite", w = wjoint$all$w),
+  Cj_conc = list(gate = "composite", w = wjoint$concordant_floor$w),
+  Cc_S3   = list(gate = "composite", w = function(rho) w_star("S3", 0.3)),
+  Cc_S4   = list(gate = "composite", w = function(rho) w_star("S4", 0.3))
 )
 design_w <- function(d, rho) if (is.function(d$w)) d$w(rho) else d$w
 
@@ -239,12 +255,12 @@ get_eta <- function(design, n1, rho, target = proceed_null) {
 }
 
 e2e_cell <- function(theta, design, n1, rho, closure = "full", nsim = mc$e2e,
-                     target = proceed_null) {
+                     target = proceed_null, ntot = n_tot) {
   d <- designs[[design]]
-  r <- run_trial(pC, theta, n1, n_tot = n_tot, rho = rho, gate = d$gate,
+  r <- run_trial(pC, theta, n1, n_tot = ntot, rho = rho, gate = d$gate,
                  w = design_w(d, rho), eta = get_eta(design, n1, rho, target),
                  nsim = nsim, alpha = alpha, closure = closure)
-  data.frame(design = design, n1 = n1, rho = rho, nsim = nsim, proceed = r$proceed,
+  data.frame(design = design, n1 = n1, ntot = ntot, rho = rho, nsim = nsim, proceed = r$proceed,
              pcs = r$pcs, power = r$power, claim_opt = r$claim_opt,
              false_claim = r$false_claim, EN = r$EN)
 }
@@ -252,11 +268,14 @@ cell_nsim <- function(cfg) if (cfg %in% names(null_configs)) mc$e2e_null else mc
 
 ## Pre-compute every boundary serially so that parallel workers share them.
 say("calibrating futility boundaries")
+## Run D grid: stage-1 size per arm and per-arm total on the selected dose and control.
+n1_D <- c(30, n1_frontier)
+ntot_D <- c(350, 400, 450, 500, 600, 700, 800, 1000)
 need_eta <- unique(rbind(
   expand.grid(design = names(designs), n1 = 100, rho = rho_latent, target = proceed_null,
               stringsAsFactors = FALSE),
-  expand.grid(design = c("M", "Cu", "Cc_S3"), n1 = n1_frontier, rho = 0.3, target = proceed_null,
-              stringsAsFactors = FALSE),
+  expand.grid(design = c("M", "Cu", "Cc_S3", "Cj_conc"), n1 = n1_D, rho = 0.3,
+              target = proceed_null, stringsAsFactors = FALSE),
   expand.grid(design = c("M", "Cu", "Cc_S3"), n1 = 100, rho = 0.3, target = proceed_null_grid,
               stringsAsFactors = FALSE)
 ))
@@ -266,9 +285,9 @@ for (i in seq_len(nrow(need_eta)))
 ## Run A: equal stage-1 cost (n1 = 100), alternatives and nulls
 say("run A")
 runA_cells <- rbind(
-  expand.grid(cfg = c("S1", "S2"), design = c("M", "Cu", "Cj"), stringsAsFactors = FALSE),
-  expand.grid(cfg = "S3", design = c("M", "Cu", "Cj", "Cc_S3"), stringsAsFactors = FALSE),
-  expand.grid(cfg = "S4", design = c("M", "Cu", "Cj", "Cc_S4"), stringsAsFactors = FALSE),
+  expand.grid(cfg = c("S1", "S2"), design = c("M", "Cu", "Cj", "Cj_conc"), stringsAsFactors = FALSE),
+  expand.grid(cfg = "S3", design = c("M", "Cu", "Cj", "Cj_conc", "Cc_S3"), stringsAsFactors = FALSE),
+  expand.grid(cfg = "S4", design = c("M", "Cu", "Cj", "Cj_conc", "Cc_S4"), stringsAsFactors = FALSE),
   expand.grid(cfg = names(null_configs), design = names(designs), stringsAsFactors = FALSE)
 )
 runA_cells <- merge(runA_cells, data.frame(rho = rho_latent))
@@ -330,64 +349,140 @@ runB <- do.call(rbind, papply(seq_len(nrow(runB_cells)), function(i) {
 }))
 write_out(runB, "e2e_runB.csv")
 
-## Run C: frontier in n1 at rho_latent = 0.3
+## Run C: frontier in n1 at rho_latent = 0.3 and fixed n_tot: co-primary gate
+## against the composite gate with the weights the design rule selects.
 say("run C")
-runC_cells <- rbind(
-  expand.grid(cfg = "S1", design = c("M", "Cu"), n1 = n1_frontier, stringsAsFactors = FALSE),
-  expand.grid(cfg = "S3", design = c("M", "Cc_S3"), n1 = n1_frontier, stringsAsFactors = FALSE)
-)
+runC_cells <- expand.grid(cfg = c("S1", "S3"), design = c("M", "Cj_conc"), n1 = n1_frontier,
+                          stringsAsFactors = FALSE)
 runC <- do.call(rbind, papply(seq_len(nrow(runC_cells)), function(i) {
   g <- runC_cells[i, ]
   cbind(cfg = g$cfg, e2e_cell(configs[[g$cfg]], g$design, g$n1, 0.3))
 }))
 write_out(runC, "e2e_runC.csv")
 
-## Matched power: interpolate each frontier at fixed power targets (Table tab:e2eCm)
-## Delta-method standard errors: SE(power) on the interpolation segment divided
-## by the slope of power in n1 gives SE(n1); E[N] is linear in n1 on the segment.
-power_targets <- c(0.60, 0.65, 0.70, 0.75)
+## Linear interpolation of a frontier (power against n1 at fixed n_tot) at a
+## target claim probability. Delta-method standard errors: SE(power) on the
+## interpolation segment divided by the slope of power in n1 gives SE(n1), and
+## E[N] is linear in n1 on the segment. bound = 1 flags a target already met at
+## the smallest n1 of the grid, where the frontier value is only an upper bound.
 interp_at <- function(d, target) {
   d <- d[order(d$n1), ]
   i <- which(d$power >= target)[1]
-  if (is.na(i) || i == 1) return(c(n1 = NA, EN = NA, se_n1 = NA, se_EN = NA))
+  if (is.na(i)) return(c(n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
+  if (i == 1) return(c(n1 = d$n1[1], EN = d$EN[1], se_n1 = NA, se_EN = NA, bound = 1))
   f <- (target - d$power[i - 1]) / (d$power[i] - d$power[i - 1])
   slope_p <- (d$power[i] - d$power[i - 1]) / (d$n1[i] - d$n1[i - 1])
   slope_EN <- (d$EN[i] - d$EN[i - 1]) / (d$n1[i] - d$n1[i - 1])
   se_n1 <- sqrt(target * (1 - target) / d$nsim[i]) / slope_p
   c(n1 = d$n1[i - 1] + f * (d$n1[i] - d$n1[i - 1]),
     EN = d$EN[i - 1] + f * (d$EN[i] - d$EN[i - 1]),
-    se_n1 = se_n1, se_EN = se_n1 * abs(slope_EN))
+    se_n1 = se_n1, se_EN = se_n1 * abs(slope_EN), bound = 0)
 }
-matched <- do.call(rbind, lapply(c("S1", "S3"), function(s) {
-  dM <- runC[runC$cfg == s & runC$design == "M", ]
-  dC <- runC[runC$cfg == s & runC$design != "M", ]
+
+## Run D: n_tot as a design parameter (Table tab:e2eD, Figure fig:frontier).
+## Every (n1, n_tot) pair of the grid is simulated at rho_latent = 0.3 for the
+## co-primary gate and for the composite gate with uniform weights (S1), the
+## configuration-specific w*(S3) (S3) and the rule-selected weights (both);
+## each design is then optimised over the pair for a target claim probability.
+say("run D")
+runD_cells <- rbind(
+  expand.grid(cfg = "S1", design = c("M", "Cu", "Cj_conc"), n1 = n1_D, ntot = ntot_D,
+              stringsAsFactors = FALSE),
+  expand.grid(cfg = "S3", design = c("M", "Cc_S3", "Cj_conc"), n1 = n1_D, ntot = ntot_D,
+              stringsAsFactors = FALSE))
+runD <- do.call(rbind, papply(seq_len(nrow(runD_cells)), function(i) {
+  g <- runD_cells[i, ]
+  cbind(cfg = g$cfg, e2e_cell(configs[[g$cfg]], g$design, g$n1, 0.3, ntot = g$ntot))
+}))
+write_out(runD, "e2e_runD.csv")
+
+## Smallest E[N] on the grid at a target: interpolate along n1 at each n_tot,
+## then take the n_tot with the smallest interpolated E[N].
+min_EN <- function(d, target) {
+  per <- t(sapply(sort(unique(d$ntot)), function(nt)
+    c(ntot = nt, interp_at(d[d$ntot == nt, ], target))))
+  ok <- which(is.finite(per[, "EN"]))
+  if (!length(ok)) return(c(ntot = NA, n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
+  per[ok[which.min(per[ok, "EN"])], ]
+}
+power_targets <- c(0.80, 0.85, 0.90)
+matchedD <- do.call(rbind, lapply(c("S1", "S3"), function(s) {
+  ds <- unique(runD_cells$design[runD_cells$cfg == s])
   do.call(rbind, lapply(power_targets, function(tp) {
-    m <- interp_at(dM, tp); cc <- interp_at(dC, tp)
-    ratio <- cc["EN"] / m["EN"]
-    data.frame(cfg = s, target = tp,
-               n1_M = round(m["n1"]), EN_M = round(m["EN"]),
-               n1_C = round(cc["n1"]), EN_C = round(cc["EN"]),
-               se_n1_M = round(m["se_n1"], 1), se_n1_C = round(cc["se_n1"], 1),
-               se_EN_M = round(m["se_EN"]), se_EN_C = round(cc["se_EN"]),
-               ratio = round(ratio, 2),
-               se_ratio = round(ratio * sqrt((cc["se_EN"] / cc["EN"])^2 + (m["se_EN"] / m["EN"])^2), 3))
+    m <- min_EN(runD[runD$cfg == s & runD$design == "M", ], tp)
+    do.call(rbind, lapply(ds, function(g) {
+      x <- min_EN(runD[runD$cfg == s & runD$design == g, ], tp)
+      ratio <- x[["EN"]] / m[["EN"]]
+      data.frame(cfg = s, target = tp, design = g,
+                 n1 = round(x[["n1"]]), ntot = x[["ntot"]],
+                 EN = round(x[["EN"]]), se_EN = round(x[["se_EN"]]),
+                 at_bound = x[["bound"]], ratio = round(ratio, 3),
+                 se_ratio = round(ratio * sqrt((x[["se_EN"]] / x[["EN"]])^2 +
+                                               (m[["se_EN"]] / m[["EN"]])^2), 3))
+    }))
   }))
 }))
-write_out(matched, "e2e_runC_matched.csv")
+write_out(matchedD, "e2e_runD_matched.csv")
 
+## Finite-sample level probe (Table tab:level): the least favourable
+## configurations with the futility rule switched off (eta = 0, every trial
+## proceeds) and the co-primary gate, mc$probe trials per cell in chunks, so that
+## the finite-sample size of the Wald test is visible above the bound of
+## Theorem 1. "N4+" is N4 with the three non-null effects raised to 0.35.
+say("level probe")
+stag_null <- function(eff) { th <- matrix(eff, 3, K); th[cbind(1:3, 1:3)] <- 0; th }
+stopifnot(isTRUE(all.equal(stag_null(0.25), null_configs$N4, check.attributes = FALSE)))
+probe_cells <- data.frame(cfg = c("N4", "N4+", "N4+", "N4+"), eff = c(0.25, 0.35, 0.35, 0.35),
+                          n1 = c(100, 100, 200, 40), ntot = c(350, 350, 350, 120),
+                          rho = c(0.3, 0, 0, 0), stringsAsFactors = FALSE)
+n_chunk <- 5
+probe_jobs <- merge(cbind(cell = seq_len(nrow(probe_cells)), probe_cells),
+                    data.frame(chunk = seq_len(n_chunk)))
+probe_raw <- do.call(rbind, papply(seq_len(nrow(probe_jobs)), function(i) {
+  g <- probe_jobs[i, ]
+  r <- run_trial(pC, stag_null(g$eff), g$n1, n_tot = g$ntot, rho = g$rho,
+                 gate = "conjunctive", eta = 0, nsim = mc$probe %/% n_chunk, alpha = alpha)
+  data.frame(cell = g$cell, false_claim = r$false_claim, proceed = r$proceed)
+}))
+probe <- cbind(probe_cells, design = "M", nsim = (mc$probe %/% n_chunk) * n_chunk,
+               proceed = tapply(probe_raw$proceed, probe_raw$cell, mean),
+               false_claim = tapply(probe_raw$false_claim, probe_raw$cell, mean))
+probe$se <- sqrt(probe$false_claim * (1 - probe$false_claim) / probe$nsim)
+write_out(probe, "level_probe.csv")
+
+## Size of the one-sided Wald test at nominal alpha for two arms of n subjects
+## with a common success probability p (mc$wald pairs of binomial counts).
+say("Wald size")
+wald_cells <- expand.grid(n = c(40, 100, 150, 250), p = c(0.43, 0.50))
+wald_size <- do.call(rbind, papply(seq_len(nrow(wald_cells)), function(i) {
+  g <- wald_cells[i, ]
+  xa <- rbinom(mc$wald, g$n, g$p); xc <- rbinom(mc$wald, g$n, g$p)
+  data.frame(n = g$n, p = g$p, nsim = mc$wald,
+             size = mean(wald_p(xa, xc, g$n, g$n) <= alpha))
+}))
+write_out(wald_size, "wald_size.csv")
+
+## Figure fig:frontier: smallest E[N] on the (n1, n_tot) grid against the
+## target claim probability, by design.
+fig_label <- list(M = quote("co-primary gate"),
+                  Cu = quote(paste("composite, uniform ", bold(w))),
+                  Cc_S3 = quote(paste("composite, ", bold(w)^"*", "(S3)")),
+                  Cj_conc = quote(paste("composite, ", bold(w)^"*", (Theta[conc]))))
+fig_col <- c(M = "black", Cu = "#D55E00", Cc_S3 = "#D55E00", Cj_conc = "#0072B2")
+fig_lty <- c(M = 1, Cu = 2, Cc_S3 = 2, Cj_conc = 1)
+tgrid <- seq(0.60, 0.92, by = 0.01)
 pdf(file.path(fig_dir, "sim_e2e_fig.pdf"), width = 9, height = 4.2)
 op <- par(mfrow = c(1, 2), mar = c(3.8, 3.8, 2, 0.5), mgp = c(2.4, 0.7, 0))
 for (s in c("S1", "S3")) {
-  d <- runC[runC$cfg == s, ]
-  plot(NA, xlim = range(d$EN), ylim = range(d$power), xlab = "Expected total sample size",
-       ylab = "Probability of co-primary claim", main = config_labels[s])
-  for (g in unique(d$design)) {
-    dd <- d[d$design == g, ]; dd <- dd[order(dd$n1), ]
-    col <- if (g == "M") "black" else "#0072B2"
-    lines(dd$EN, dd$power, type = "o", pch = if (g == "M") 16 else 15, col = col)
-  }
-  legend("bottomright", c("co-primary gate", "composite gate"), pch = c(16, 15),
-         col = c("black", "#0072B2"), lty = 1, bty = "n")
+  ds <- unique(runD_cells$design[runD_cells$cfg == s])
+  env <- sapply(ds, function(g) sapply(tgrid, function(tp)
+    min_EN(runD[runD$cfg == s & runD$design == g, ], tp)[["EN"]]))
+  plot(NA, xlim = range(tgrid), ylim = range(env, na.rm = TRUE),
+       xlab = "Target probability of co-primary claim",
+       ylab = "Smallest expected total sample size", main = config_labels[s])
+  for (g in ds) lines(tgrid, env[, g], col = fig_col[g], lty = fig_lty[g], lwd = 1.5)
+  legend("topleft", legend = as.expression(fig_label[ds]), col = fig_col[ds],
+         lty = fig_lty[ds], lwd = 1.5, bty = "n")
 }
 par(op); invisible(dev.off())
 say("wrote results/figures/sim_e2e_fig.pdf")

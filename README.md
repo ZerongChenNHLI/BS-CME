@@ -43,8 +43,8 @@ cd manuscript && latexmk -xelatex main
 ```
 
 Base R only (≥ 4.0); no packages need installing. The full run takes about
-5 minutes on 4 cores; `Rscript R/run_simulations.R --quick` runs a smoke test
-with a tenth of the replicates in about 30 seconds. Random-number streams are
+10 minutes on 4 cores; `Rscript R/run_simulations.R --quick` runs a smoke test
+with a tenth of the replicates in about a minute. Random-number streams are
 assigned per cell (L'Ecuyer streams), so the output is identical for every
 value of `BSCME_CORES`. `BSCME_CALIBRATE=0` uses the calibrated weights
 reported in the paper instead of re-deriving them. `make_tables.R` also prints
@@ -55,7 +55,7 @@ quoted in captions.
 | --- | --- |
 | `bracket.csv` | second-moment bracket, eq. (bracket), last column of Table tab:main |
 | `weights_calibrated.csv` | configuration-specific weights, Table tab:weights |
-| `weights_joint.csv` | jointly calibrated weights, Table tab:wjoint |
+| `weights_joint.csv` | jointly calibrated weights, free and with the floor, Table tab:wjoint |
 | `pcs_cross.csv` | cross-evaluation of weights (PCS and regret), Table tab:cross |
 | `pcs_curves.csv`, `table_main_n1.csv`, `figures/sim_fig.pdf` | Table tab:main, Figure fig:pcs |
 | `table_msweep.csv` | Table tab:msweep |
@@ -63,7 +63,9 @@ quoted in captions.
 | `e2e_closure.csv` | full closure against dose-level and per-endpoint closures, Table tab:closure |
 | `e2e_eta.csv` | sensitivity to the futility-boundary target, Table tab:eta |
 | `e2e_runB.csv` | Table tab:e2eB |
-| `e2e_runC.csv`, `e2e_runC_matched.csv`, `figures/sim_e2e_fig.pdf` | Tables tab:e2eC, tab:e2eCm, Figure fig:frontier |
+| `e2e_runC.csv` | frontier in n1 at fixed n_tot = 350, Table tab:e2eC |
+| `e2e_runD.csv`, `e2e_runD_matched.csv`, `figures/sim_e2e_fig.pdf` | (n1, n_tot) grid and the comparison at target power 0.80/0.85/0.90, Table tab:e2eD, Figure fig:frontier |
+| `level_probe.csv`, `wald_size.csv` | finite-sample level of the test in the least favourable nulls (200,000 trials per cell) and the size of the one-sided Wald test, Table tab:level |
 
 ## Compiling the manuscript
 

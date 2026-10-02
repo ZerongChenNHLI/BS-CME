@@ -27,9 +27,18 @@ fmt_ratio <- function(s) {                      # "0.42", "<0.34", ">3.01" or NA
   ifelse(is.na(s) | s == "", "", gsub("^([<>])", "$\\1$", s))
 }
 fmt_theta <- function(x) ifelse(x < 0, sprintf("$%.2f$", x), sprintf("%.2f", x))
+## The rule-selected vector is the floored calibration over the concordant set;
+## when the floor is inactive it equals the free one and is labelled as such.
+wj0 <- rd("weights_joint.csv")
+wvec <- function(set) unlist(wj0[wj0$set == set, paste0("w", 1:4)])
+conc_floor_active <- !isTRUE(all.equal(wvec("concordant"), wvec("concordant_floor"),
+                                       check.attributes = FALSE))
+conc_label <- if (conc_floor_active) "$\\mathbf w^\\star(\\Theta_{\\mathrm{conc}}, w_k\\ge0.1)$" else
+  "$\\mathbf w^\\star(\\Theta_{\\mathrm{conc}})$"
 design_label <- c(M = "M: co-primary gate",
                   Cu = "C: composite, uniform $\\mathbf w$",
                   Cj = "C: composite, $\\mathbf w^\\star(\\Theta_{\\mathrm{all}})$",
+                  Cj_conc = paste0("C: composite, ", conc_label),
                   Cc_S3 = "C: composite, $\\mathbf w^\\star$(S3)",
                   Cc_S4 = "C: composite, $\\mathbf w^\\star$(S4)")
 cfg_label <- c(config_labels, null_labels)
@@ -123,7 +132,8 @@ emit("tab_msweep",
 wj <- rd("weights_joint.csv")
 set_label <- c(all = "$\\Theta_{\\mathrm{all}}=\\{$S1, S2, S3, S4$\\}$",
                concordant = "$\\Theta_{\\mathrm{conc}}=\\{$S1, S2, S3$\\}$",
-               all_floor = paste0("$\\Theta_{\\mathrm{all}}$, $w_k\\ge", fmt(w_floor, 2), "$"))
+               all_floor = paste0("$\\Theta_{\\mathrm{all}}$, $w_k\\ge", fmt(w_floor, 2), "$"),
+               concordant_floor = paste0("$\\Theta_{\\mathrm{conc}}$, $w_k\\ge", fmt(w_floor, 2), "$"))
 emit("tab_wjoint",
      c("\\begin{tabular}{lcccccc}", "\\toprule",
        "& \\multicolumn{4}{c}{$\\bw^\\star$} & \\multicolumn{2}{c}{Mean PCS over $\\Theta$} \\\\",
@@ -133,8 +143,10 @@ emit("tab_wjoint",
      {
        cr <- rd("pcs_cross.csv")
        mean_pcs <- function(gate, set) mean(cr$pcs[cr$gate == gate & cr$cfg %in% theta_sets[[set]]])
-       gate_of <- c(all = "Cj_all", concordant = "Cj_conc", all_floor = "Cj_floor")
-       set_of <- c(all = "all", concordant = "concordant", all_floor = "all")
+       gate_of <- c(all = "Cj_all", concordant = "Cj_conc", all_floor = "Cj_floor",
+                    concordant_floor = "Cj_cfloor")
+       set_of <- c(all = "all", concordant = "concordant", all_floor = "all",
+                   concordant_floor = "concordant")
        row(set_label[wj$set], fmt(wj$w1, 2), fmt(wj$w2, 2), fmt(wj$w3, 2), fmt(wj$w4, 2),
            fmt(sapply(wj$set, function(s) mean_pcs(gate_of[s], set_of[s])), 3),
            fmt(sapply(wj$set, function(s) mean_pcs("M", set_of[s])), 3))
@@ -142,11 +154,16 @@ emit("tab_wjoint",
 
 ## --------------------------------------------------------------- tab:cross
 cr <- rd("pcs_cross.csv")
-gates <- c("M", "Cu", "Cj_all", "Cj_conc", "Cj_floor", "Cc_S3", "Cc_S4")
+## The floored concordant vector gets a column only when it differs from the free one.
+gates <- c("M", "Cu", "Cj_all", "Cj_conc", "Cj_floor", if (conc_floor_active) "Cj_cfloor",
+           "Cc_S3", "Cc_S4")
 gate_head <- c(M = "co-primary", Cu = "uniform", Cj_all = "$\\bw^\\star(\\Theta_{\\mathrm{all}})$",
                Cj_conc = "$\\bw^\\star(\\Theta_{\\mathrm{conc}})$",
                Cj_floor = "$\\bw^\\star(\\Theta_{\\mathrm{all}}, w_k\\ge0.1)$",
+               Cj_cfloor = "$\\bw^\\star(\\Theta_{\\mathrm{conc}}, w_k\\ge0.1)$",
                Cc_S3 = "$\\bw^\\star$(S3)", Cc_S4 = "$\\bw^\\star$(S4)")
+if (!conc_floor_active)
+  cat("  floored and free w*(Theta_conc) coincide; no separate column in tab_cross\n")
 get <- function(cfg, gate, var) cr[[var]][cr$cfg == cfg & cr$gate == gate]
 cells <- function(x) paste(x, collapse = " & ")
 rows <- unlist(lapply(names(configs), function(s) {
@@ -157,9 +174,11 @@ rows <- c(rows, "\\midrule",
           row("Mean PCS, S1--S4", "", cells(sapply(gates, function(g) fmt(mean(sapply(theta_sets$all, get, g, "pcs")), 3)))),
           row("Mean PCS, S1--S3", "", cells(sapply(gates, function(g) fmt(mean(sapply(theta_sets$concordant, get, g, "pcs")), 3)))))
 emit("tab_cross",
-     c("\\setlength{\\tabcolsep}{3pt}", "\\begin{tabular}{llccccccc}", "\\toprule",
-       "& & \\multicolumn{1}{c}{Co-primary} & \\multicolumn{6}{c}{Composite gate, weights} \\\\",
-       "\\cmidrule(lr){3-3}\\cmidrule(lr){4-9}",
+     c("\\setlength{\\tabcolsep}{3pt}", paste0("\\begin{tabular}{ll", strrep("c", length(gates)), "}"),
+       "\\toprule",
+       sprintf("& & \\multicolumn{1}{c}{Co-primary} & \\multicolumn{%d}{c}{Composite gate, weights} \\\\",
+               length(gates) - 1),
+       sprintf("\\cmidrule(lr){3-3}\\cmidrule(lr){4-%d}", length(gates) + 2),
        paste("Configuration & &", paste(gate_head[gates], collapse = " & "), "\\\\"), "\\midrule"),
      rows)
 
@@ -298,20 +317,49 @@ emit("tab_e2eC",
        "\\midrule"),
      rows)
 
-## --------------------------------------------------------------- tab:e2eCm
-Cm <- rd("e2e_runC_matched.csv")
+## ---------------------------------------------------------------- tab:e2eD
+D <- rd("e2e_runD_matched.csv")
+D <- D[order(match(D$cfg, names(cfg_label)), D$target, match(D$design, names(design_label))), ]
+fmt_int <- function(x) ifelse(is.na(x), "--", formatC(x, format = "d"))
 rows <- unlist(lapply(c("S1", "S3"), function(s) {
-  d <- Cm[Cm$cfg == s, ]
-  c(row(first_only(cfg_label[d$cfg]), fmt(d$target, 2),
-        with_se(d$n1_M, d$se_n1_M), with_se(d$EN_M, d$se_EN_M),
-        with_se(d$n1_C, d$se_n1_C), with_se(d$EN_C, d$se_EN_C),
-        ifelse(is.na(d$ratio), "--", paste0(fmt(d$ratio, 2), " (", fmt(d$se_ratio, 3), ")"))),
-    if (s != "S3") "\\addlinespace[3pt]")
+  d <- D[D$cfg == s, ]
+  unlist(lapply(unique(d$target), function(tp) {
+    e <- d[d$target == tp, ]
+    c(row(ifelse(seq_len(nrow(e)) == 1 & tp == min(d$target), cfg_label[s], ""),
+          first_only(fmt(e$target, 2)), design_label[e$design], fmt_int(e$n1), fmt_int(e$ntot),
+          ifelse(is.na(e$EN), "--", paste0(fmt(e$EN, 0), " (", fmt(e$se_EN, 0), ")")),
+          ifelse(e$design == "M", "1",
+                 ifelse(is.na(e$ratio), "--", paste0(fmt(e$ratio, 2), " (", fmt(e$se_ratio, 2), ")")))),
+      if (!(s == "S3" && tp == max(d$target))) "\\addlinespace[3pt]")
+  }))
 }))
-emit("tab_e2eCm",
-     c("\\begin{tabular}{lcccccc}", "\\toprule",
-       "& & \\multicolumn{2}{c}{M: co-primary gate} & \\multicolumn{2}{c}{C: composite gate} & \\\\",
-       "\\cmidrule(lr){3-4}\\cmidrule(lr){5-6}",
-       "Configuration & Target power & $n_1$ & $E[N]$ & $n_1$ & $E[N]$ & $E[N]$ ratio C/M \\\\",
+emit("tab_e2eD",
+     c("\\begin{tabular}{lllcccc}", "\\toprule",
+       paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ &",
+             "$E[N]$ ratio to M \\\\"),
        "\\midrule"),
      rows)
+if (any(D$at_bound == 1, na.rm = TRUE))
+  cat("  NOTE: run D optimum at the smallest n1 of the grid for:",
+      paste(unique(paste(D$cfg, D$design, D$target)[D$at_bound == 1 & !is.na(D$at_bound)]), collapse = "; "), "\n")
+grid_max <- max(rd("e2e_runD.csv")$ntot)
+if (any(D$ntot == grid_max, na.rm = TRUE))
+  cat("  NOTE: run D optimum at the largest n_tot of the grid for:",
+      paste(unique(paste(D$cfg, D$design, D$target)[D$ntot == grid_max & !is.na(D$ntot)]), collapse = "; "), "\n")
+
+## --------------------------------------------------------------- tab:level
+pr <- rd("level_probe.csv")
+probe_label <- ifelse(pr$cfg == "N4", "N4 (staggered null, effects $0.25$)",
+                      sprintf("Staggered null, effects $%.2f$", pr$eff))
+emit("tab_level",
+     c("\\begin{tabular}{lcccc}", "\\toprule",
+       "Configuration & $n_1$ & $n_{\\mathrm{tot}}$ & $\\rho_{\\mathrm{lat}}$ & False-claim rate (s.e.) \\\\",
+       "\\midrule"),
+     row(probe_label, pr$n1, pr$ntot, fmt(pr$rho, 1),
+         paste0(fmt(pr$false_claim, 4), " (", fmt(pr$se, 4), ")")))
+ws <- rd("wald_size.csv")
+cat(sprintf("  level probe: false-claim rates %.4f to %.4f (%s trials per cell)\n",
+            min(pr$false_claim), max(pr$false_claim), format(pr$nsim[1], big.mark = ",")))
+cat(sprintf("  Wald one-sided size at alpha = %.3f: %.4f to %.4f over n = %s, p = %s\n",
+            alpha, min(ws$size), max(ws$size), paste(unique(ws$n), collapse = "/"),
+            paste(unique(ws$p), collapse = "/")))
