@@ -156,15 +156,6 @@ pcs <- papply(seq_len(nrow(grid)), function(i) {
 pcs_curves <- cbind(grid, do.call(rbind, pcs))
 write_out(pcs_curves, "pcs_curves.csv")
 
-## Delta-method standard error of the interpolated n1: SE(PCS) divided by the
-## slope of the PCS curve on the interpolation segment.
-n1_se <- function(n1, pcs, target, nsim) {
-  i <- which(pcs >= target)[1]
-  if (is.na(i) || i == 1) return(NA_real_)
-  slope <- (pcs[i] - pcs[i - 1]) / (n1[i] - n1[i - 1])
-  sqrt(target * (1 - target) / nsim) / slope
-}
-
 tab_main <- do.call(rbind, lapply(split(pcs_curves, list(pcs_curves$cfg, pcs_curves$rho)),
   function(d) {
     d <- d[order(d$n1), ]

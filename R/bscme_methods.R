@@ -100,7 +100,10 @@ simulate_counts <- function(cellp, n, nsim) {
 #' posterior Dirichlet parameters over the relevant cells.
 #'
 #' @param counts array [nsim, arms, J] (or a matrix [arms, J] for one trial)
-#' @param alpha0 prior Dirichlet parameter, scalar or length J (default 1/J)
+#' @param alpha0 prior Dirichlet parameter: scalar, length J (same prior for
+#'   every arm; default 1/J) or an (M + 1) x J matrix with one row per arm,
+#'   control last, for an arm-specific prior such as an informative control
+#'   prior (prior sensitivity analysis, R/run_prior_sensitivity.R)
 #' @return list(mean = [nsim, arms, K], cov = [nsim, arms, K, K])
 posterior_moments <- function(counts, alpha0 = NULL) {
   if (length(dim(counts)) == 2) counts <- array(counts, c(1, dim(counts)))
@@ -109,7 +112,13 @@ posterior_moments <- function(counts, alpha0 = NULL) {
   Y <- cell_patterns(K)
   if (is.null(alpha0)) alpha0 <- rep(1 / J, J)
   if (length(alpha0) == 1) alpha0 <- rep(alpha0, J)
-  post <- sweep(counts, 3, alpha0, "+")                  # alpha'
+  post <- if (is.matrix(alpha0)) {                        # alpha', arm-specific
+    stopifnot(nrow(alpha0) == A, ncol(alpha0) == J)
+    counts + array(rep(alpha0, each = nsim), c(nsim, A, J))
+  } else {
+    stopifnot(length(alpha0) == J)
+    sweep(counts, 3, alpha0, "+")                         # alpha', common
+  }
   flat <- matrix(post, nsim * A, J)                       # rows = (sim, arm)
   a0 <- rowSums(flat)
   aK <- flat %*% Y                                        # alpha'(R_k)
@@ -538,6 +547,15 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
   i <- i[1]
   if (i == 1) return(n1[1])
   n1[i - 1] + (target - pcs[i - 1]) * (n1[i] - n1[i - 1]) / (pcs[i] - pcs[i - 1])
+}
+
+## Delta-method standard error of the interpolated n1: SE(PCS) divided by the
+## slope of the PCS curve on the interpolation segment.
+n1_se <- function(n1, pcs, target, nsim) {
+  i <- which(pcs >= target)[1]
+  if (is.na(i) || i == 1) return(NA_real_)
+  slope <- (pcs[i] - pcs[i - 1]) / (n1[i] - n1[i - 1])
+  sqrt(target * (1 - target) / nsim) / slope
 }
 
 #' End-to-end simulation of the seamless design (Section e2e).

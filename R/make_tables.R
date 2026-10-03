@@ -363,3 +363,46 @@ cat(sprintf("  level probe: false-claim rates %.4f to %.4f (%s trials per cell)\
 cat(sprintf("  Wald one-sided size at alpha = %.3f: %.4f to %.4f over n = %s, p = %s\n",
             alpha, min(ws$size), max(ws$size), paste(unique(ws$n), collapse = "/"),
             paste(unique(ws$p), collapse = "/")))
+
+## ---------------------------------------------------------------- tab:prior
+## Prior sensitivity (R/run_prior_sensitivity.R); skipped if its output is absent.
+ps <- tryCatch(rd("prior_sens.csv"), warning = function(w) NULL, error = function(e) NULL)
+if (!is.null(ps)) {
+  prior_label <- c(weak      = "$\\Dir(\\mathbf 1/J)$, all arms (reference)",
+                   jeffreys  = "$\\Dir(\\mathbf 1/2)$, all arms",
+                   flat      = "$\\Dir(\\mathbf 1)$, all arms",
+                   ctrl20    = "$\\Dir(20\\,\\mathbf q_C)$ on control",
+                   ctrl50    = "$\\Dir(50\\,\\mathbf q_C)$ on control",
+                   ctrl50mis = "$\\Dir(50\\,\\tilde{\\mathbf q}_C)$ on control")
+  ps <- ps[order(match(ps$cfg, names(cfg_label)), match(ps$prior, names(prior_label))), ]
+  rows <- unlist(lapply(unique(ps$cfg), function(s) {
+    d <- ps[ps$cfg == s, ]
+    c(row(first_only(cfg_label[d$cfg]), prior_label[d$prior], gsub("/", " / ", d$mass),
+          paste0(fmt(d$n1_M, 0), " (", fmt(d$se_n1_M, 0), ")"),
+          paste0(fmt(d$n1_C, 0), " (", fmt(d$se_n1_C, 0), ")"),
+          fmt(d$ratio, 2), fmt(d$pcs.M, 2), fmt(d$pcs.C, 2),
+          fmt(d$power.M, 2), fmt(d$power.C, 2), fmt(d$EN.M, 0), fmt(d$EN.C, 0)),
+      if (s != tail(unique(ps$cfg), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_prior",
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllccccccccc}", "\\toprule",
+         paste("& & & \\multicolumn{3}{c}{$n_1$ at $\\PCS=0.8$} &",
+               "\\multicolumn{6}{c}{$n_1=100$, $n_{\\mathrm{tot}}=350$} \\\\"),
+         "\\cmidrule(lr){4-6}\\cmidrule(lr){7-12}",
+         paste("& & & & & & \\multicolumn{2}{c}{PCS} & \\multicolumn{2}{c}{Power} &",
+               "\\multicolumn{2}{c}{$E[N]$} \\\\"),
+         "\\cmidrule(lr){7-8}\\cmidrule(lr){9-10}\\cmidrule(lr){11-12}",
+         "Configuration & Prior & Mass & M & C & C/M & M & C & M & C & M & C \\\\",
+         "\\midrule"),
+       rows)
+  for (s in unique(ps$cfg)) {
+    d <- ps[ps$cfg == s, ]
+    cat(sprintf(paste("  prior sensitivity %s: n1 ratio C/M %.2f-%.2f; PCS M %.3f-%.3f, C %.3f-%.3f;",
+                      "power M %.3f-%.3f, C %.3f-%.3f; E[N] M %.0f-%.0f, C %.0f-%.0f; proceed M %.3f-%.3f, C %.3f-%.3f\n"),
+                s, min(d$ratio), max(d$ratio), min(d$pcs.M), max(d$pcs.M), min(d$pcs.C), max(d$pcs.C),
+                min(d$power.M), max(d$power.M), min(d$power.C), max(d$power.C),
+                min(d$EN.M), max(d$EN.M), min(d$EN.C), max(d$EN.C),
+                min(d$proceed.M), max(d$proceed.M), min(d$proceed.C), max(d$proceed.C)))
+    cat(sprintf("    ratio by prior: %s\n", paste(d$prior, fmt(d$ratio, 3), collapse = ", ")))
+  }
+}
