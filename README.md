@@ -1,7 +1,7 @@
 # BS-CME
 Bayesian seamless II/III trial with endpoint switch
 
-A Bayesian seamless phase II/III dose-optimisation design that selects the dose
+A Bayesian seamless phase II/III dose-selection design that selects the dose
 on a pre-specified weighted composite of $K$ binary endpoints and confirms the
 selected dose on the full co-primary criterion, with stage-1 data included. The
 confirmatory analysis is a closed test over all dose × endpoint hypotheses with

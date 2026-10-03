@@ -1,5 +1,5 @@
 ## =============================================================================
-## BS-CME: Bayesian seamless phase II/III dose-optimisation design with a
+## BS-CME: Bayesian seamless phase II/III dose-selection design with a
 ## weighted composite selection endpoint and co-primary confirmatory endpoints.
 ##
 ## Method code. Base R only (stats, utils). Section and equation numbers refer
