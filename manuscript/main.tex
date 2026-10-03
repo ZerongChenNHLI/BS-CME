@@ -14,7 +14,18 @@
 %% the modern kernel allocates inserts from the extended pool without reservation.
 \RequirePackage{etex}
 \providecommand{\reserveinserts}[1]{}
-\documentclass[AMA,STIX1COL]{WileyNJDv5}
+\documentclass[STIX1COL]{WileyNJDv5}
+%% Author--year references in APA style (Biometrical Journal). The class's APA
+%% option needs Wiley's NJDapacite.sty and WileyNJD-APA.bst, which are not
+%% distributed with this template, so the standard apacite package is used with
+%% natbib citation commands (\citet, \citep, \citealt).
+\usepackage[natbibapa]{apacite}
+\bibliographystyle{apacite}
+\makeatletter
+\NAT@longnamesfalse % ``et al.'' from the first citation of a work with three or more authors
+\renewcommand\refname{REFERENCES}
+\renewcommand{\bibfont}{\reset@font\fontfamily{\rmdefault}\fontsize{8.5}{11}\selectfont\baselineskip=10\p@}
+\makeatother
 
 \usepackage{bm}
 \usepackage{booktabs}
@@ -96,6 +107,10 @@ The author declares no potential conflict of interests.
 \bmsection*{Data availability statement}
 No new data were created. R code reproducing every table and figure, including the method functions, the simulation configurations and the scripts that generate the tables from the simulation output, is available at \url{https://github.com/ZerongChenNHLI/BS-CME}.
 
+%% The class uses \doi to store the article's own DOI; give it back apacite's meaning
+%% (a linked https://doi.org/ address) for the reference list.
+\renewcommand{\doiprefix}{}
+\renewcommand{\doi}[1]{\href{https://doi.org/#1}{https://doi.org/#1}}
 \bibliography{refs}
 
 \input{appendix}
