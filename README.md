@@ -70,7 +70,7 @@ quoted in captions.
 | `e2e_runC.csv` | frontier in n1 at fixed n_tot = 350, Table tab:e2eC |
 | `e2e_runD.csv`, `e2e_runD_matched.csv`, `figures/sim_e2e_fig.pdf` | (n1, n_tot) grid and the comparison at target power 0.80/0.85/0.90, Table tab:e2eD, Figure fig:frontier |
 | `level_probe.csv`, `wald_size.csv` | finite-sample level of the test in the least favourable nulls (200,000 trials per cell) and the size of the one-sided Wald test, Table tab:level |
-| `prior_sens.csv`, `prior_sens_pcs_curves.csv` | prior sensitivity analysis (`run_prior_sensitivity.R`; uses the rule-selected weights from `weights_joint.csv`), Table tab:prior |
+| `prior_sens.csv`, `prior_sens_pcs_curves.csv`, `prior_sens_belief.csv` | prior sensitivity analysis (`run_prior_sensitivity.R`; uses the rule-selected weights from `weights_joint.csv`), Tables tab:prior and tab:prior_belief |
 
 ## Compiling the manuscript
 

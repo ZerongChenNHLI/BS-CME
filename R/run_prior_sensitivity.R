@@ -20,12 +20,19 @@
 ## For each prior: n1 at PCS = 0.8 from the PCS curve over n1_grid (common
 ## stage-1 data for both gates), and at n1 = 100, n_tot = 350 the probability
 ## of proceeding, PCS, power and E[N], with eta recalibrated under the global
-## null for each gate and prior. The prior enters only the selection and
-## futility statistics; the confirmatory test is unchanged.
+## null at the true control rates for each gate and prior. The prior enters
+## only the selection and futility statistics; the confirmatory test is
+## unchanged.
+##
+## A third block takes the designer's point of view for the size-50 control
+## prior: the boundary is calibrated under the control rates the designer
+## believes (correct, 0.10 too high, 0.10 too low) and the trial is then run at
+## the true rates under N0, S1 and S3 (Table tab:prior_belief).
 ##
 ##   BSCME_CORES=4 Rscript R/run_prior_sensitivity.R   ->  results/prior_sens.csv
-##                                                         results/prior_sens_n1.csv
-## About 2 minutes on 4 cores (--quick: a tenth of the replicates).
+##                                                         results/prior_sens_pcs_curves.csv
+##                                                         results/prior_sens_belief.csv
+## About a minute on 4 cores (--quick: a tenth of the replicates).
 ## =============================================================================
 
 args <- commandArgs(TRUE)
@@ -126,4 +133,30 @@ out <- merge(n1_tab, reshape(e2e[, c("prior", "cfg", "design", "proceed", "pcs",
 out$mass <- prior_mass[out$prior]
 out <- out[order(match(out$cfg, cfgs), match(out$prior, names(priors))), ]
 write_out(out, "prior_sens.csv")
+
+## 3. Historical control belief: the size-50 control prior with the futility
+##    boundary calibrated under the control rates the designer believes in,
+##    then the trial run at the true rates (N0 = global null, S1, S3)
+say("historical control belief")
+shifts <- c(correct = 0, optimistic = 0.10, pessimistic = -0.10)
+m_hist <- 50
+cells3 <- expand.grid(belief = names(shifts), design = c("M", "C"), stringsAsFactors = FALSE)
+belief <- do.call(rbind, papply(seq_len(nrow(cells3)), function(i) {
+  g <- cells3[i, ]
+  gate <- if (g$design == "M") "conjunctive" else "composite"
+  w <- if (g$design == "M") NULL else w_conc
+  pC_b <- pC + shifts[[g$belief]]                      # control rates as the designer believes them
+  a0 <- prior_mat(rep(1 / J, J), m_hist * cell_probs_latent(pC_b, rho = rho))
+  eta <- calibrate_eta(pC_b, M, n1_ref, rho, gate = gate, w = w, target = proceed_null,
+                       nsim = mc$eta, alpha0 = a0)     # global null as the designer believes it
+  do.call(rbind, lapply(c("N0", cfgs), function(cf) {
+    theta <- if (cf == "N0") null_configs[[cf]] else configs[[cf]]
+    r <- run_trial(pC, theta, n1_ref, n_tot = n_tot, rho = rho, gate = gate, w = w,
+                   eta = eta, nsim = mc$e2e, alpha = alpha, alpha0 = a0)   # the truth is pC
+    data.frame(g, shift = shifts[[g$belief]], mass_C = m_hist, cfg = cf, n1 = n1_ref,
+               ntot = n_tot, rho = rho, nsim = mc$e2e, eta = eta, proceed = r$proceed,
+               pcs = r$pcs, power = r$power, EN = r$EN, false_claim = r$false_claim)
+  }))
+}))
+write_out(belief, "prior_sens_belief.csv")
 say("done", if (quick) "(quick mode)" else "")

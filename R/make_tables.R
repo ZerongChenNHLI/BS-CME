@@ -406,3 +406,34 @@ if (!is.null(ps)) {
     cat(sprintf("    ratio by prior: %s\n", paste(d$prior, fmt(d$ratio, 3), collapse = ", ")))
   }
 }
+
+## ---------------------------------------------------------------- tab:prior_belief
+bl <- tryCatch(rd("prior_sens_belief.csv"), warning = function(w) NULL, error = function(e) NULL)
+if (!is.null(bl)) {
+  belief_label <- c(correct = "centred on the truth", optimistic = "optimistic ($+0.10$)",
+                    pessimistic = "pessimistic ($-0.10$)")
+  pick <- function(b, d, cf) bl[bl$belief == b & bl$design == d & bl$cfg == cf, ]
+  rows <- unlist(lapply(names(belief_label), function(b) {
+    c(sapply(c("M", "C"), function(d) {
+        n0 <- pick(b, d, "N0"); s1 <- pick(b, d, "S1"); s3 <- pick(b, d, "S3")
+        row(if (d == "M") belief_label[b] else "", d, fmt(n0$proceed, 2), fmt(n0$EN, 0),
+            fmt(s1$pcs, 2), fmt(s1$power, 2), fmt(s1$EN, 0),
+            fmt(s3$pcs, 2), fmt(s3$power, 2), fmt(s3$EN, 0))
+      }),
+      if (b != tail(names(belief_label), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_prior_belief",
+       c("\\begin{tabular}{llcccccccc}", "\\toprule",
+         paste("& & \\multicolumn{2}{c}{N0 global null} & \\multicolumn{3}{c}{S1 parallel} &",
+               "\\multicolumn{3}{c}{S3 concentrated} \\\\"),
+         "\\cmidrule(lr){3-4}\\cmidrule(lr){5-7}\\cmidrule(lr){8-10}",
+         paste("Historical control & Gate & $\\Pr(\\text{proceed})$ & $E[N]$ & PCS & Power & $E[N]$ &",
+               "PCS & Power & $E[N]$ \\\\"),
+         "\\midrule"),
+       rows)
+  for (b in names(belief_label)) for (d in c("M", "C")) {
+    n0 <- pick(b, d, "N0"); s1 <- pick(b, d, "S1"); s3 <- pick(b, d, "S3"); c1 <- pick("correct", d, "S1"); c3 <- pick("correct", d, "S3")
+    cat(sprintf("  belief %-11s %s: proceed|N0 %.3f, E[N]|N0 %.0f; power S1 %.3f (%+.3f vs correct), S3 %.3f (%+.3f); E[N] S1 %.0f, S3 %.0f\n",
+                b, d, n0$proceed, n0$EN, s1$power, s1$power - c1$power, s3$power, s3$power - c3$power, s1$EN, s3$EN))
+  }
+}
