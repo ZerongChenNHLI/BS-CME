@@ -233,9 +233,9 @@ cat(sprintf("  max false-claim rate in run A alternatives: %.4f (%s)\n",
 
 ## ---------------------------------------------------------------- tab:e2eN
 nul <- A[A$cfg %in% names(null_configs), ]
-wn <- wide(nul, c("proceed", "false_claim"), c(2, 4))
-# reorder the cells so that the three proceed columns come first, then false claims
-ord <- c(1, 3, 5, 2, 4, 6)
+wn <- wide(nul, c("proceed", "false_claim", "EN"), c(2, 4, 0))
+# reorder the cells so that the three proceed columns come first, then false claims, then E[N]
+ord <- c(1, 4, 7, 2, 5, 8, 3, 6, 9)
 rows <- unlist(lapply(unique(wn$key$cfg), function(s) {
   i <- which(wn$key$cfg == s)
   c(row(first_only(cfg_label[wn$key$cfg[i]]), design_label[wn$key$design[i]],
@@ -243,10 +243,12 @@ rows <- unlist(lapply(unique(wn$key$cfg), function(s) {
     if (s != tail(unique(wn$key$cfg), 1)) "\\addlinespace[3pt]")
 }))
 emit("tab_e2eN",
-     c("\\setlength{\\tabcolsep}{4pt}", "\\begin{tabular}{llcccccc}", "\\toprule",
-       "& & \\multicolumn{3}{c}{$\\Pr(\\text{proceed})$} & \\multicolumn{3}{c}{$\\Pr(\\text{false claim})$} \\\\",
-       "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}",
-       "Configuration & Design & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ \\\\",
+     c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{llccccccccc}", "\\toprule",
+       paste("& & \\multicolumn{3}{c}{$\\Pr(\\text{proceed})$} & \\multicolumn{3}{c}{$\\Pr(\\text{false claim})$} &",
+             "\\multicolumn{3}{c}{$E[N]$} \\\\"),
+       "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\\cmidrule(lr){9-11}",
+       paste("Configuration & Design & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ &",
+             "$\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ \\\\"),
        "\\midrule"),
      rows)
 cat(sprintf("  max false-claim rate in run A nulls: %.4f (%s)\n",
