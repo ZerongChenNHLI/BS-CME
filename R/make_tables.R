@@ -40,7 +40,12 @@ design_label <- c(M = "M: co-primary gate",
                   Cj = "C: composite, $\\mathbf w^\\star(\\Theta_{\\mathrm{all}})$",
                   Cj_conc = paste0("C: composite, ", conc_label),
                   Cc_S3 = "C: composite, $\\mathbf w^\\star$(S3)",
-                  Cc_S4 = "C: composite, $\\mathbf w^\\star$(S4)")
+                  Cc_S4 = "C: composite, $\\mathbf w^\\star$(S4)",
+                  Cu_pe = "C: uniform $\\mathbf w$ + per-endpoint check",
+                  Cj_conc_pe = paste0("C: ", conc_label, " + per-endpoint check"))
+## Optional results of R/run_pe_check.R and R/run_association.R; the tables
+## that use them are built from the main run alone when the files are absent.
+rd_opt <- function(name) if (file.exists(file.path(res_dir, name))) rd(name) else NULL
 cfg_label <- c(config_labels, null_labels)
 with_se <- function(x, se, d = 0) ifelse(is.na(se), fmt(x, d), paste0(fmt(x, d), " (", fmt(se, 1), ")"))
 
@@ -201,6 +206,8 @@ emit("tab_eta",
 
 ## ---------------------------------------------------------------- tab:e2eA
 A <- rd("e2e_runA.csv")
+pe <- rd_opt("e2e_pe_runA.csv")
+if (!is.null(pe)) A <- rbind(A, pe[, names(A)])
 alt <- A[A$cfg %in% names(configs), ]
 wide <- function(d, vars, digits) {
   key <- unique(d[, c("cfg", "design")])
@@ -321,25 +328,50 @@ emit("tab_e2eC",
 
 ## ---------------------------------------------------------------- tab:e2eD
 D <- rd("e2e_runD_matched.csv")
+Dpe <- rd_opt("e2e_pe_runD_matched.csv")
+if (!is.null(Dpe)) D <- rbind(D, Dpe[, names(D)])
 D <- D[order(match(D$cfg, names(cfg_label)), D$target, match(D$design, names(design_label))), ]
+nulls <- rd_opt("e2e_runD_nulls.csv")
+null_cols <- function(e, nl) {
+  # E[N] under N0 and N1 at each design's optimum, with the ratio to the co-primary gate
+  if (is.null(nulls)) return(NULL)
+  m <- nulls[nulls$cfg == e$cfg[1] & nulls$target == e$target[1] & nulls$null == nl, ]
+  en <- m$EN[match(e$design, m$design)]
+  ref <- m$EN[m$design == "M"]
+  c(EN = list(ifelse(is.na(en), "--", fmt(en, 0))),
+    ratio = list(ifelse(e$design == "M", "1",
+                        ifelse(is.na(en) | !length(ref), "--", fmt(en / ref, 2)))))
+}
 fmt_int <- function(x) ifelse(is.na(x), "--", formatC(x, format = "d"))
 rows <- unlist(lapply(c("S1", "S3"), function(s) {
   d <- D[D$cfg == s, ]
   unlist(lapply(unique(d$target), function(tp) {
     e <- d[d$target == tp, ]
+    n0 <- null_cols(e, "N0"); n1 <- null_cols(e, "N1")
     c(row(ifelse(seq_len(nrow(e)) == 1 & tp == min(d$target), cfg_label[s], ""),
           first_only(fmt(e$target, 2)), design_label[e$design], fmt_int(e$n1), fmt_int(e$ntot),
           ifelse(is.na(e$EN), "--", paste0(fmt(e$EN, 0), " (", fmt(e$se_EN, 0), ")")),
           ifelse(e$design == "M", "1",
-                 ifelse(is.na(e$ratio), "--", paste0(fmt(e$ratio, 2), " (", fmt(e$se_ratio, 2), ")")))),
+                 ifelse(is.na(e$ratio), "--", paste0(fmt(e$ratio, 2), " (", fmt(e$se_ratio, 2), ")"))),
+          if (!is.null(nulls)) paste(n0$EN, n0$ratio, n1$EN, n1$ratio, sep = " & ")),
       if (!(s == "S3" && tp == max(d$target))) "\\addlinespace[3pt]")
   }))
 }))
 emit("tab_e2eD",
-     c("\\begin{tabular}{lllcccc}", "\\toprule",
-       paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ &",
-             "$E[N]$ ratio to M \\\\"),
-       "\\midrule"),
+     if (is.null(nulls)) {
+       c("\\begin{tabular}{lllcccc}", "\\toprule",
+         paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ &",
+               "$E[N]$ ratio to M \\\\"),
+         "\\midrule")
+     } else {
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllcccccccc}", "\\toprule",
+         paste("& & & & & \\multicolumn{2}{c}{Design alternative} & \\multicolumn{2}{c}{N0: global null} &",
+               "\\multicolumn{2}{c}{N1: one inert component} \\\\"),
+         "\\cmidrule(lr){6-7}\\cmidrule(lr){8-9}\\cmidrule(lr){10-11}",
+         paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ & ratio to M &",
+               "$E[N]$ & ratio & $E[N]$ & ratio \\\\"),
+         "\\midrule")
+     },
      rows)
 if (any(D$at_bound == 1, na.rm = TRUE))
   cat("  NOTE: run D optimum at the smallest n1 of the grid for:",
@@ -348,6 +380,33 @@ grid_max <- max(rd("e2e_runD.csv")$ntot)
 if (any(D$ntot == grid_max, na.rm = TRUE))
   cat("  NOTE: run D optimum at the largest n_tot of the grid for:",
       paste(unique(paste(D$cfg, D$design, D$target)[D$ntot == grid_max & !is.na(D$ntot)]), collapse = "; "), "\n")
+
+## ---------------------------------------------------------------- tab:assoc
+## Agreement between the interim composite and the co-primary criterion
+## (R/run_association.R)
+as <- rd_opt("association.csv")
+if (!is.null(as)) {
+  w_label <- c(Cu = "uniform $\\mathbf w$", Cj_conc = conc_label)
+  aucM <- function(cfg, rho) as$auc_GM[as$cfg == cfg & as$rho == rho & as$design == "M"]
+  ac <- as[as$design != "M", ]
+  ac <- ac[order(match(ac$cfg, names(configs)), ac$rho, match(ac$design, names(w_label))), ]
+  rows <- unlist(lapply(names(configs), function(s) {
+    d <- ac[ac$cfg == s, ]
+    c(row(first_only(cfg_label[d$cfg]), first_only(fmt(d$rho, 1)), w_label[d$design],
+          fmt(d$r_z, 2), fmt(d$tau, 2), fmt(d$agree, 2), fmt(d$agree_opt, 2), fmt(d$r_G, 2),
+          fmt(d$auc_G, 2), fmt(d$auc_GM, 2), fmt(mapply(aucM, d$cfg, d$rho), 2)),
+      if (s != tail(names(configs), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_assoc",
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllcccccccc}", "\\toprule",
+         paste("& & & \\multicolumn{4}{c}{Ranking of the $M$ doses at the interim} &",
+               "\\multicolumn{4}{c}{Selected dose: interim statistic and final claim} \\\\"),
+         "\\cmidrule(lr){4-7}\\cmidrule(lr){8-11}",
+         paste("Configuration & $\\rho_{\\mathrm{lat}}$ & Weights & $r(z^{\\mathrm{C}},z^{\\mathrm{M}})$ & $\\tau$ &",
+               "same dose & both $a^\\circ$ & $r(G,G^{\\mathrm{M}})$ & AUC($G$) & AUC($G^{\\mathrm{M}}$) & AUC, M gate \\\\"),
+         "\\midrule"),
+       rows)
+}
 
 ## --------------------------------------------------------------- tab:level
 pr <- rd("level_probe.csv")

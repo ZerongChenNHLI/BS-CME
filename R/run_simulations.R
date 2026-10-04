@@ -351,25 +351,6 @@ runC <- do.call(rbind, papply(seq_len(nrow(runC_cells)), function(i) {
 }))
 write_out(runC, "e2e_runC.csv")
 
-## Linear interpolation of a frontier (power against n1 at fixed n_tot) at a
-## target claim probability. Delta-method standard errors: SE(power) on the
-## interpolation segment divided by the slope of power in n1 gives SE(n1), and
-## E[N] is linear in n1 on the segment. bound = 1 flags a target already met at
-## the smallest n1 of the grid, where the frontier value is only an upper bound.
-interp_at <- function(d, target) {
-  d <- d[order(d$n1), ]
-  i <- which(d$power >= target)[1]
-  if (is.na(i)) return(c(n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
-  if (i == 1) return(c(n1 = d$n1[1], EN = d$EN[1], se_n1 = NA, se_EN = NA, bound = 1))
-  f <- (target - d$power[i - 1]) / (d$power[i] - d$power[i - 1])
-  slope_p <- (d$power[i] - d$power[i - 1]) / (d$n1[i] - d$n1[i - 1])
-  slope_EN <- (d$EN[i] - d$EN[i - 1]) / (d$n1[i] - d$n1[i - 1])
-  se_n1 <- sqrt(target * (1 - target) / d$nsim[i]) / slope_p
-  c(n1 = d$n1[i - 1] + f * (d$n1[i] - d$n1[i - 1]),
-    EN = d$EN[i - 1] + f * (d$EN[i] - d$EN[i - 1]),
-    se_n1 = se_n1, se_EN = se_n1 * abs(slope_EN), bound = 0)
-}
-
 ## Run D: n_tot as a design parameter (Table tab:e2eD, Figure fig:frontier).
 ## Every (n1, n_tot) pair of the grid is simulated at rho_latent = 0.3 for the
 ## co-primary gate and for the composite gate with uniform weights (S1), the
@@ -387,15 +368,6 @@ runD <- do.call(rbind, papply(seq_len(nrow(runD_cells)), function(i) {
 }))
 write_out(runD, "e2e_runD.csv")
 
-## Smallest E[N] on the grid at a target: interpolate along n1 at each n_tot,
-## then take the n_tot with the smallest interpolated E[N].
-min_EN <- function(d, target) {
-  per <- t(sapply(sort(unique(d$ntot)), function(nt)
-    c(ntot = nt, interp_at(d[d$ntot == nt, ], target))))
-  ok <- which(is.finite(per[, "EN"]))
-  if (!length(ok)) return(c(ntot = NA, n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
-  per[ok[which.min(per[ok, "EN"])], ]
-}
 power_targets <- c(0.80, 0.85, 0.90)
 matchedD <- do.call(rbind, lapply(c("S1", "S3"), function(s) {
   ds <- unique(runD_cells$design[runD_cells$cfg == s])
