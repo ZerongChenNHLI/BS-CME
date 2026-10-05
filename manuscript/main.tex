@@ -14,7 +14,18 @@
 %% the modern kernel allocates inserts from the extended pool without reservation.
 \RequirePackage{etex}
 \providecommand{\reserveinserts}[1]{}
-\documentclass[AMA,STIX1COL]{WileyNJDv5}
+\documentclass[STIX1COL]{WileyNJDv5}
+%% Author--year references in APA style (Biometrical Journal). The class's APA
+%% option needs Wiley's NJDapacite.sty and WileyNJD-APA.bst, which are not
+%% distributed with this template, so the standard apacite package is used with
+%% natbib citation commands (\citet, \citep, \citealt).
+\usepackage[natbibapa]{apacite}
+\bibliographystyle{apacite}
+\makeatletter
+\NAT@longnamesfalse % ``et al.'' from the first citation of a work with three or more authors
+\renewcommand\refname{REFERENCES}
+\renewcommand{\bibfont}{\reset@font\fontfamily{\rmdefault}\fontsize{8.5}{11}\selectfont\baselineskip=10\p@}
+\makeatother
 
 \usepackage{bm}
 \usepackage{booktabs}
@@ -62,7 +73,7 @@
 
 \begin{document}
 
-\title{A Bayesian seamless phase II/III dose-optimisation design with a weighted composite selection endpoint and co-primary confirmatory endpoints}
+\title{A Bayesian seamless phase II/III dose-selection design with a weighted composite selection endpoint and co-primary confirmatory endpoints}
 
 \author[1,2]{Zerong Chen}
 
@@ -74,11 +85,11 @@
 
 \corres{Zerong Chen, National Heart and Lung Institute, Imperial College London, London, United Kingdom. \email{z.chen@imperial.ac.uk}}
 
-\abstract[Abstract]{Confirmatory trials with $K$ binary co-primary endpoints require every endpoint to succeed, so the type II error inflates with $K$ and the sample size rises accordingly. In a seamless phase II/III dose-optimisation design this cost is paid once per candidate dose at the selection stage. We propose a design in which the $M$ doses are compared at the interim on a single pre-specified weighted composite of the binary components, and the selected dose is confirmed on the full co-primary criterion with the stage-1 data included. Both functionals are projections of the same Dirichlet--multinomial cell-probability vector, so the inter-endpoint dependence is determined by the model rather than assumed. We prove that the probability of a false co-primary claim is at most $\alpha$ for every configuration of effects and for any selection rule, futility rule and stage-2 sample size, by a closed test over all dose--endpoint hypotheses with stage-wise $p$-values combined by the inverse-normal rule, computed exactly through a closed-form shortcut; closing each endpoint separately over doses does not control this error, and we quantify the inflation. Under parallel dose effects a second-moment argument brackets the ratio of stage-1 sample sizes needed for a given selection accuracy below one, and we characterise the configurations in which the composite gate fails: discordance between the composite and co-primary optima, and failure on a single component, which a composite registers weakly. In simulation calibrated to a four-serogroup meningococcal vaccine example, the design reaches a claim probability of 0.80--0.90 with about 10\% fewer expected subjects than a co-primary-gated seamless design under parallel dose effects (9--12\% with uniform weights, 5--9\% with the weights the design rule selects), saves little or nothing when the dose-discriminating information is concentrated on one endpoint, and is inferior when the optimum is a trade-off between endpoints. A design rule based on the frontier of claim probability against expected sample size is given.}
+\abstract[Abstract]{Confirmatory trials with $K$ binary co-primary endpoints require every endpoint to succeed, so the type II error inflates with $K$ and the sample size rises accordingly. In a seamless phase II/III dose-selection design this cost is paid once per candidate dose at the selection stage. We propose a design in which the $M$ doses are compared at the interim on a single pre-specified weighted composite of the binary components, and the selected dose is confirmed on the full co-primary criterion with the stage-1 data included. Both functionals are projections of the same Dirichlet--multinomial cell-probability vector, so the inter-endpoint dependence is determined by the model rather than assumed. We prove that the probability of a false co-primary claim is at most $\alpha$ for every configuration of effects and for any selection rule, futility rule and stage-2 sample size, by a closed test over all dose--endpoint hypotheses with stage-wise $p$-values combined by the inverse-normal rule, computed exactly through a closed-form shortcut; closing each endpoint separately over doses does not control this error, and we quantify the inflation. Under parallel dose effects a second-moment argument brackets the ratio of stage-1 sample sizes needed for a given selection accuracy below one, and we characterise the configurations in which the composite gate fails: discordance between the composite and co-primary optima, and failure on a single component, which a composite registers weakly. In simulation calibrated to a four-serogroup meningococcal vaccine example, the design reaches a claim probability of 0.80--0.90 with about 10\% fewer expected subjects than a co-primary-gated seamless design under parallel dose effects (9--12\% with uniform weights, 5--9\% with the weights the design rule selects), saves little or nothing when the dose-discriminating information is concentrated on one endpoint, and is inferior when the optimum is a trade-off between endpoints. A lenient per-endpoint futility check added to the composite gate removes its excess expected sample size when one component is inert for one to three points of that saving. A design rule based on the frontier of claim probability against expected sample size is given.}
 
-\keywords{adaptive seamless design; closed testing; co-primary endpoints; composite endpoint; Dirichlet--multinomial; dose optimisation; treatment selection}
+\keywords{adaptive seamless design; closed testing; co-primary endpoints; composite endpoint; Dirichlet--multinomial; dose selection; treatment selection}
 
-\jnlcitation{\cname{\author{Z. Chen}}. \ctitle{A Bayesian seamless phase II/III dose-optimisation design with a weighted composite selection endpoint and co-primary confirmatory endpoints.} \cjournal{\it Biometrical Journal} \cvol{2026;00(00):1--24}.}
+\jnlcitation{\cname{\author{Z. Chen}}. \ctitle{A Bayesian seamless phase II/III dose-selection design with a weighted composite selection endpoint and co-primary confirmatory endpoints.} \cjournal{\it Biometrical Journal} \cvol{2026;00(00):1--31}.}
 
 \maketitle
 
@@ -96,6 +107,10 @@ The author declares no potential conflict of interests.
 \bmsection*{Data availability statement}
 No new data were created. R code reproducing every table and figure, including the method functions, the simulation configurations and the scripts that generate the tables from the simulation output, is available at \url{https://github.com/ZerongChenNHLI/BS-CME}.
 
+%% The class uses \doi to store the article's own DOI; give it back apacite's meaning
+%% (a linked https://doi.org/ address) for the reference list.
+\renewcommand{\doiprefix}{}
+\renewcommand{\doi}[1]{\href{https://doi.org/#1}{https://doi.org/#1}}
 \bibliography{refs}
 
 \input{appendix}

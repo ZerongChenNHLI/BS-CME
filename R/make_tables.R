@@ -40,7 +40,12 @@ design_label <- c(M = "M: co-primary gate",
                   Cj = "C: composite, $\\mathbf w^\\star(\\Theta_{\\mathrm{all}})$",
                   Cj_conc = paste0("C: composite, ", conc_label),
                   Cc_S3 = "C: composite, $\\mathbf w^\\star$(S3)",
-                  Cc_S4 = "C: composite, $\\mathbf w^\\star$(S4)")
+                  Cc_S4 = "C: composite, $\\mathbf w^\\star$(S4)",
+                  Cu_pe = "C: uniform $\\mathbf w$ + per-endpoint check",
+                  Cj_conc_pe = paste0("C: ", conc_label, " + per-endpoint check"))
+## Optional results of R/run_pe_check.R and R/run_association.R; the tables
+## that use them are built from the main run alone when the files are absent.
+rd_opt <- function(name) if (file.exists(file.path(res_dir, name))) rd(name) else NULL
 cfg_label <- c(config_labels, null_labels)
 with_se <- function(x, se, d = 0) ifelse(is.na(se), fmt(x, d), paste0(fmt(x, d), " (", fmt(se, 1), ")"))
 
@@ -201,6 +206,8 @@ emit("tab_eta",
 
 ## ---------------------------------------------------------------- tab:e2eA
 A <- rd("e2e_runA.csv")
+pe <- rd_opt("e2e_pe_runA.csv")
+if (!is.null(pe)) A <- rbind(A, pe[, names(A)])
 alt <- A[A$cfg %in% names(configs), ]
 wide <- function(d, vars, digits) {
   key <- unique(d[, c("cfg", "design")])
@@ -233,9 +240,9 @@ cat(sprintf("  max false-claim rate in run A alternatives: %.4f (%s)\n",
 
 ## ---------------------------------------------------------------- tab:e2eN
 nul <- A[A$cfg %in% names(null_configs), ]
-wn <- wide(nul, c("proceed", "false_claim"), c(2, 4))
-# reorder the cells so that the three proceed columns come first, then false claims
-ord <- c(1, 3, 5, 2, 4, 6)
+wn <- wide(nul, c("proceed", "false_claim", "EN"), c(2, 4, 0))
+# reorder the cells so that the three proceed columns come first, then false claims, then E[N]
+ord <- c(1, 4, 7, 2, 5, 8, 3, 6, 9)
 rows <- unlist(lapply(unique(wn$key$cfg), function(s) {
   i <- which(wn$key$cfg == s)
   c(row(first_only(cfg_label[wn$key$cfg[i]]), design_label[wn$key$design[i]],
@@ -243,10 +250,12 @@ rows <- unlist(lapply(unique(wn$key$cfg), function(s) {
     if (s != tail(unique(wn$key$cfg), 1)) "\\addlinespace[3pt]")
 }))
 emit("tab_e2eN",
-     c("\\setlength{\\tabcolsep}{4pt}", "\\begin{tabular}{llcccccc}", "\\toprule",
-       "& & \\multicolumn{3}{c}{$\\Pr(\\text{proceed})$} & \\multicolumn{3}{c}{$\\Pr(\\text{false claim})$} \\\\",
-       "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}",
-       "Configuration & Design & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ \\\\",
+     c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{llccccccccc}", "\\toprule",
+       paste("& & \\multicolumn{3}{c}{$\\Pr(\\text{proceed})$} & \\multicolumn{3}{c}{$\\Pr(\\text{false claim})$} &",
+             "\\multicolumn{3}{c}{$E[N]$} \\\\"),
+       "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\\cmidrule(lr){9-11}",
+       paste("Configuration & Design & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ & $\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ &",
+             "$\\rho_{\\mathrm{lat}}=0$ & $0.3$ & $0.6$ \\\\"),
        "\\midrule"),
      rows)
 cat(sprintf("  max false-claim rate in run A nulls: %.4f (%s)\n",
@@ -319,25 +328,50 @@ emit("tab_e2eC",
 
 ## ---------------------------------------------------------------- tab:e2eD
 D <- rd("e2e_runD_matched.csv")
+Dpe <- rd_opt("e2e_pe_runD_matched.csv")
+if (!is.null(Dpe)) D <- rbind(D, Dpe[, names(D)])
 D <- D[order(match(D$cfg, names(cfg_label)), D$target, match(D$design, names(design_label))), ]
+nulls <- rd_opt("e2e_runD_nulls.csv")
+null_cols <- function(e, nl) {
+  # E[N] under N0 and N1 at each design's optimum, with the ratio to the co-primary gate
+  if (is.null(nulls)) return(NULL)
+  m <- nulls[nulls$cfg == e$cfg[1] & nulls$target == e$target[1] & nulls$null == nl, ]
+  en <- m$EN[match(e$design, m$design)]
+  ref <- m$EN[m$design == "M"]
+  c(EN = list(ifelse(is.na(en), "--", fmt(en, 0))),
+    ratio = list(ifelse(e$design == "M", "1",
+                        ifelse(is.na(en) | !length(ref), "--", fmt(en / ref, 2)))))
+}
 fmt_int <- function(x) ifelse(is.na(x), "--", formatC(x, format = "d"))
 rows <- unlist(lapply(c("S1", "S3"), function(s) {
   d <- D[D$cfg == s, ]
   unlist(lapply(unique(d$target), function(tp) {
     e <- d[d$target == tp, ]
+    n0 <- null_cols(e, "N0"); n1 <- null_cols(e, "N1")
     c(row(ifelse(seq_len(nrow(e)) == 1 & tp == min(d$target), cfg_label[s], ""),
           first_only(fmt(e$target, 2)), design_label[e$design], fmt_int(e$n1), fmt_int(e$ntot),
           ifelse(is.na(e$EN), "--", paste0(fmt(e$EN, 0), " (", fmt(e$se_EN, 0), ")")),
           ifelse(e$design == "M", "1",
-                 ifelse(is.na(e$ratio), "--", paste0(fmt(e$ratio, 2), " (", fmt(e$se_ratio, 2), ")")))),
+                 ifelse(is.na(e$ratio), "--", paste0(fmt(e$ratio, 2), " (", fmt(e$se_ratio, 2), ")"))),
+          if (!is.null(nulls)) paste(n0$EN, n0$ratio, n1$EN, n1$ratio, sep = " & ")),
       if (!(s == "S3" && tp == max(d$target))) "\\addlinespace[3pt]")
   }))
 }))
 emit("tab_e2eD",
-     c("\\begin{tabular}{lllcccc}", "\\toprule",
-       paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ &",
-             "$E[N]$ ratio to M \\\\"),
-       "\\midrule"),
+     if (is.null(nulls)) {
+       c("\\begin{tabular}{lllcccc}", "\\toprule",
+         paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ &",
+               "$E[N]$ ratio to M \\\\"),
+         "\\midrule")
+     } else {
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllcccccccc}", "\\toprule",
+         paste("& & & & & \\multicolumn{2}{c}{Design alternative} & \\multicolumn{2}{c}{N0: global null} &",
+               "\\multicolumn{2}{c}{N1: one inert component} \\\\"),
+         "\\cmidrule(lr){6-7}\\cmidrule(lr){8-9}\\cmidrule(lr){10-11}",
+         paste("Configuration & Target power & Design & $n_1$ & $n_{\\mathrm{tot}}$ & $E[N]$ & ratio to M &",
+               "$E[N]$ & ratio & $E[N]$ & ratio \\\\"),
+         "\\midrule")
+     },
      rows)
 if (any(D$at_bound == 1, na.rm = TRUE))
   cat("  NOTE: run D optimum at the smallest n1 of the grid for:",
@@ -346,6 +380,33 @@ grid_max <- max(rd("e2e_runD.csv")$ntot)
 if (any(D$ntot == grid_max, na.rm = TRUE))
   cat("  NOTE: run D optimum at the largest n_tot of the grid for:",
       paste(unique(paste(D$cfg, D$design, D$target)[D$ntot == grid_max & !is.na(D$ntot)]), collapse = "; "), "\n")
+
+## ---------------------------------------------------------------- tab:assoc
+## Agreement between the interim composite and the co-primary criterion
+## (R/run_association.R)
+as <- rd_opt("association.csv")
+if (!is.null(as)) {
+  w_label <- c(Cu = "uniform $\\mathbf w$", Cj_conc = conc_label)
+  aucM <- function(cfg, rho) as$auc_GM[as$cfg == cfg & as$rho == rho & as$design == "M"]
+  ac <- as[as$design != "M", ]
+  ac <- ac[order(match(ac$cfg, names(configs)), ac$rho, match(ac$design, names(w_label))), ]
+  rows <- unlist(lapply(names(configs), function(s) {
+    d <- ac[ac$cfg == s, ]
+    c(row(first_only(cfg_label[d$cfg]), first_only(fmt(d$rho, 1)), w_label[d$design],
+          fmt(d$r_z, 2), fmt(d$tau, 2), fmt(d$agree, 2), fmt(d$agree_opt, 2), fmt(d$r_G, 2),
+          fmt(d$auc_G, 2), fmt(d$auc_GM, 2), fmt(mapply(aucM, d$cfg, d$rho), 2)),
+      if (s != tail(names(configs), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_assoc",
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllcccccccc}", "\\toprule",
+         paste("& & & \\multicolumn{4}{c}{Ranking of the $M$ doses at the interim} &",
+               "\\multicolumn{4}{c}{Selected dose: interim statistic and final claim} \\\\"),
+         "\\cmidrule(lr){4-7}\\cmidrule(lr){8-11}",
+         paste("Configuration & $\\rho_{\\mathrm{lat}}$ & Weights & $r(z^{\\mathrm{C}},z^{\\mathrm{M}})$ & $\\tau$ &",
+               "same dose & both $a^\\circ$ & $r(G,G^{\\mathrm{M}})$ & AUC($G$) & AUC($G^{\\mathrm{M}}$) & AUC, M gate \\\\"),
+         "\\midrule"),
+       rows)
+}
 
 ## --------------------------------------------------------------- tab:level
 pr <- rd("level_probe.csv")
@@ -363,3 +424,77 @@ cat(sprintf("  level probe: false-claim rates %.4f to %.4f (%s trials per cell)\
 cat(sprintf("  Wald one-sided size at alpha = %.3f: %.4f to %.4f over n = %s, p = %s\n",
             alpha, min(ws$size), max(ws$size), paste(unique(ws$n), collapse = "/"),
             paste(unique(ws$p), collapse = "/")))
+
+## ---------------------------------------------------------------- tab:prior
+## Prior sensitivity (R/run_prior_sensitivity.R); skipped if its output is absent.
+ps <- tryCatch(rd("prior_sens.csv"), warning = function(w) NULL, error = function(e) NULL)
+if (!is.null(ps)) {
+  prior_label <- c(weak      = "$\\Dir(\\mathbf 1/J)$, all arms (reference)",
+                   jeffreys  = "$\\Dir(\\mathbf 1/2)$, all arms",
+                   flat      = "$\\Dir(\\mathbf 1)$, all arms",
+                   ctrl20    = "$\\Dir(20\\,\\mathbf q_C)$ on control",
+                   ctrl50    = "$\\Dir(50\\,\\mathbf q_C)$ on control",
+                   ctrl50mis = "$\\Dir(50\\,\\tilde{\\mathbf q}_C)$ on control")
+  ps <- ps[order(match(ps$cfg, names(cfg_label)), match(ps$prior, names(prior_label))), ]
+  rows <- unlist(lapply(unique(ps$cfg), function(s) {
+    d <- ps[ps$cfg == s, ]
+    c(row(first_only(cfg_label[d$cfg]), prior_label[d$prior], gsub("/", " / ", d$mass),
+          paste0(fmt(d$n1_M, 0), " (", fmt(d$se_n1_M, 0), ")"),
+          paste0(fmt(d$n1_C, 0), " (", fmt(d$se_n1_C, 0), ")"),
+          fmt(d$ratio, 2), fmt(d$pcs.M, 2), fmt(d$pcs.C, 2),
+          fmt(d$power.M, 2), fmt(d$power.C, 2), fmt(d$EN.M, 0), fmt(d$EN.C, 0)),
+      if (s != tail(unique(ps$cfg), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_prior",
+       c("\\setlength{\\tabcolsep}{3.5pt}", "\\begin{tabular}{lllccccccccc}", "\\toprule",
+         paste("& & & \\multicolumn{3}{c}{$n_1$ at $\\PCS=0.8$} &",
+               "\\multicolumn{6}{c}{$n_1=100$, $n_{\\mathrm{tot}}=350$} \\\\"),
+         "\\cmidrule(lr){4-6}\\cmidrule(lr){7-12}",
+         paste("& & & & & & \\multicolumn{2}{c}{PCS} & \\multicolumn{2}{c}{Power} &",
+               "\\multicolumn{2}{c}{$E[N]$} \\\\"),
+         "\\cmidrule(lr){7-8}\\cmidrule(lr){9-10}\\cmidrule(lr){11-12}",
+         "Configuration & Prior & Mass & M & C & C/M & M & C & M & C & M & C \\\\",
+         "\\midrule"),
+       rows)
+  for (s in unique(ps$cfg)) {
+    d <- ps[ps$cfg == s, ]
+    cat(sprintf(paste("  prior sensitivity %s: n1 ratio C/M %.2f-%.2f; PCS M %.3f-%.3f, C %.3f-%.3f;",
+                      "power M %.3f-%.3f, C %.3f-%.3f; E[N] M %.0f-%.0f, C %.0f-%.0f; proceed M %.3f-%.3f, C %.3f-%.3f\n"),
+                s, min(d$ratio), max(d$ratio), min(d$pcs.M), max(d$pcs.M), min(d$pcs.C), max(d$pcs.C),
+                min(d$power.M), max(d$power.M), min(d$power.C), max(d$power.C),
+                min(d$EN.M), max(d$EN.M), min(d$EN.C), max(d$EN.C),
+                min(d$proceed.M), max(d$proceed.M), min(d$proceed.C), max(d$proceed.C)))
+    cat(sprintf("    ratio by prior: %s\n", paste(d$prior, fmt(d$ratio, 3), collapse = ", ")))
+  }
+}
+
+## ---------------------------------------------------------------- tab:prior_belief
+bl <- tryCatch(rd("prior_sens_belief.csv"), warning = function(w) NULL, error = function(e) NULL)
+if (!is.null(bl)) {
+  belief_label <- c(correct = "centred on the truth", optimistic = "optimistic ($+0.10$)",
+                    pessimistic = "pessimistic ($-0.10$)")
+  pick <- function(b, d, cf) bl[bl$belief == b & bl$design == d & bl$cfg == cf, ]
+  rows <- unlist(lapply(names(belief_label), function(b) {
+    c(sapply(c("M", "C"), function(d) {
+        n0 <- pick(b, d, "N0"); s1 <- pick(b, d, "S1"); s3 <- pick(b, d, "S3")
+        row(if (d == "M") belief_label[b] else "", d, fmt(n0$proceed, 2), fmt(n0$EN, 0),
+            fmt(s1$pcs, 2), fmt(s1$power, 2), fmt(s1$EN, 0),
+            fmt(s3$pcs, 2), fmt(s3$power, 2), fmt(s3$EN, 0))
+      }),
+      if (b != tail(names(belief_label), 1)) "\\addlinespace[3pt]")
+  }))
+  emit("tab_prior_belief",
+       c("\\begin{tabular}{llcccccccc}", "\\toprule",
+         paste("& & \\multicolumn{2}{c}{N0 global null} & \\multicolumn{3}{c}{S1 parallel} &",
+               "\\multicolumn{3}{c}{S3 concentrated} \\\\"),
+         "\\cmidrule(lr){3-4}\\cmidrule(lr){5-7}\\cmidrule(lr){8-10}",
+         paste("Historical control & Gate & $\\Pr(\\text{proceed})$ & $E[N]$ & PCS & Power & $E[N]$ &",
+               "PCS & Power & $E[N]$ \\\\"),
+         "\\midrule"),
+       rows)
+  for (b in names(belief_label)) for (d in c("M", "C")) {
+    n0 <- pick(b, d, "N0"); s1 <- pick(b, d, "S1"); s3 <- pick(b, d, "S3"); c1 <- pick("correct", d, "S1"); c3 <- pick("correct", d, "S3")
+    cat(sprintf("  belief %-11s %s: proceed|N0 %.3f, E[N]|N0 %.0f; power S1 %.3f (%+.3f vs correct), S3 %.3f (%+.3f); E[N] S1 %.0f, S3 %.0f\n",
+                b, d, n0$proceed, n0$EN, s1$power, s1$power - c1$power, s3$power, s3$power - c3$power, s1$EN, s3$EN))
+  }
+}

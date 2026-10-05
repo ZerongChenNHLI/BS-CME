@@ -1,5 +1,5 @@
 ## =============================================================================
-## BS-CME: Bayesian seamless phase II/III dose-optimisation design with a
+## BS-CME: Bayesian seamless phase II/III dose-selection design with a
 ## weighted composite selection endpoint and co-primary confirmatory endpoints.
 ##
 ## Method code. Base R only (stats, utils). Section and equation numbers refer
@@ -100,7 +100,10 @@ simulate_counts <- function(cellp, n, nsim) {
 #' posterior Dirichlet parameters over the relevant cells.
 #'
 #' @param counts array [nsim, arms, J] (or a matrix [arms, J] for one trial)
-#' @param alpha0 prior Dirichlet parameter, scalar or length J (default 1/J)
+#' @param alpha0 prior Dirichlet parameter: scalar, length J (same prior for
+#'   every arm; default 1/J) or an (M + 1) x J matrix with one row per arm,
+#'   control last, for an arm-specific prior such as an informative control
+#'   prior (prior sensitivity analysis, R/run_prior_sensitivity.R)
 #' @return list(mean = [nsim, arms, K], cov = [nsim, arms, K, K])
 posterior_moments <- function(counts, alpha0 = NULL) {
   if (length(dim(counts)) == 2) counts <- array(counts, c(1, dim(counts)))
@@ -109,7 +112,13 @@ posterior_moments <- function(counts, alpha0 = NULL) {
   Y <- cell_patterns(K)
   if (is.null(alpha0)) alpha0 <- rep(1 / J, J)
   if (length(alpha0) == 1) alpha0 <- rep(alpha0, J)
-  post <- sweep(counts, 3, alpha0, "+")                  # alpha'
+  post <- if (is.matrix(alpha0)) {                        # alpha', arm-specific
+    stopifnot(nrow(alpha0) == A, ncol(alpha0) == J)
+    counts + array(rep(alpha0, each = nsim), c(nsim, A, J))
+  } else {
+    stopifnot(length(alpha0) == J)
+    sweep(counts, 3, alpha0, "+")                         # alpha', common
+  }
   flat <- matrix(post, nsim * A, J)                       # rows = (sim, arm)
   a0 <- rowSums(flat)
   aK <- flat %*% Y                                        # alpha'(R_k)
@@ -174,10 +183,14 @@ quad_form <- function(covflat, w) as.vector(covflat %*% as.vector(outer(w, w)))
 #' @param z   [nsim, M] ranking statistics (zC or zM from gate_stats)
 #' @param eta go/no-go boundary on the probability scale; NULL = always proceed
 #' @return    data.frame(sel = selected dose, G = Phi(z) at sel, go = logical)
-select_dose <- function(z, eta = NULL) {
+select_dose <- function(z, eta = NULL, zM = NULL, eta_pe = NULL) {
   sel <- max.col(z, ties.method = "random")
   G <- pnorm(z[cbind(seq_len(nrow(z)), sel)])
   go <- if (is.null(eta)) rep(TRUE, length(G)) else G >= eta
+  if (!is.null(eta_pe)) {                                 # per-endpoint check
+    Gmin <- pnorm(zM[cbind(seq_len(nrow(z)), sel)])      # min_k Pr(p_{a*,k} > p_{C,k})
+    go <- go & Gmin >= eta_pe
+  }
   data.frame(sel = sel, G = G, go = go)
 }
 
@@ -433,15 +446,23 @@ calibrate_weights <- function(scenarios, pC, n1, rho = 0, W = NULL,
 #' @param gate "composite" or "conjunctive"
 calibrate_eta <- function(pC, M, n1, rho = 0, gate = c("composite", "conjunctive"),
                           w = NULL, target = 0.20, nsim = 10000,
-                          delta = NULL, alpha0 = NULL) {
+                          delta = NULL, alpha0 = NULL, eta_pe = NULL) {
   gate <- match.arg(gate)
   K <- length(pC)
   theta0 <- matrix(0, M, K)
   cnt <- simulate_counts(config_cell_probs(pC, theta0, rho), n1, nsim)
   gs <- gate_stats(posterior_moments(cnt, alpha0), w = w, delta = delta)
   z <- if (gate == "composite") gs$zC else gs$zM
-  G <- pnorm(apply(z, 1, max))
-  unname(quantile(G, 1 - target, type = 7))
+  sel <- max.col(z, ties.method = "first")
+  G <- pnorm(z[cbind(seq_len(nsim), sel)])
+  if (is.null(eta_pe)) return(unname(quantile(G, 1 - target, type = 7)))
+  ## With the per-endpoint check (stop if min_k Pr(p_{a*,k} > p_{C,k}) < eta_pe)
+  ## in place, eta is set so that the two rules together proceed with
+  ## probability `target` under the global null. If the check alone already
+  ## proceeds less often than `target`, eta = 0 (the check is the whole rule).
+  pass <- pnorm(gs$zM[cbind(seq_len(nsim), sel)]) >= eta_pe
+  if (mean(pass) <= target) return(0)
+  unname(quantile(G[pass], 1 - target / mean(pass), type = 7))
 }
 
 #' Predictive probability of co-primary success for stage-2 size n2 (eq. ppos).
@@ -540,6 +561,41 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
   n1[i - 1] + (target - pcs[i - 1]) * (n1[i] - n1[i - 1]) / (pcs[i] - pcs[i - 1])
 }
 
+## Delta-method standard error of the interpolated n1: SE(PCS) divided by the
+## slope of the PCS curve on the interpolation segment.
+n1_se <- function(n1, pcs, target, nsim) {
+  i <- which(pcs >= target)[1]
+  if (is.na(i) || i == 1) return(NA_real_)
+  slope <- (pcs[i] - pcs[i - 1]) / (n1[i] - n1[i - 1])
+  sqrt(target * (1 - target) / nsim) / slope
+}
+
+## Linear interpolation of the frontier (power, E[N]) in n1 at a target power,
+## with delta-method standard errors (run D and the per-endpoint-check run).
+interp_at <- function(d, target) {
+  d <- d[order(d$n1), ]
+  i <- which(d$power >= target)[1]
+  if (is.na(i)) return(c(n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
+  if (i == 1) return(c(n1 = d$n1[1], EN = d$EN[1], se_n1 = NA, se_EN = NA, bound = 1))
+  f <- (target - d$power[i - 1]) / (d$power[i] - d$power[i - 1])
+  slope_p <- (d$power[i] - d$power[i - 1]) / (d$n1[i] - d$n1[i - 1])
+  slope_EN <- (d$EN[i] - d$EN[i - 1]) / (d$n1[i] - d$n1[i - 1])
+  se_n1 <- sqrt(target * (1 - target) / d$nsim[i]) / slope_p
+  c(n1 = d$n1[i - 1] + f * (d$n1[i] - d$n1[i - 1]),
+    EN = d$EN[i - 1] + f * (d$EN[i] - d$EN[i - 1]),
+    se_n1 = se_n1, se_EN = se_n1 * abs(slope_EN), bound = 0)
+}
+
+## Smallest E[N] on the grid at a target: interpolate along n1 at each n_tot,
+## then take the n_tot with the smallest interpolated E[N].
+min_EN <- function(d, target) {
+  per <- t(sapply(sort(unique(d$ntot)), function(nt)
+    c(ntot = nt, interp_at(d[d$ntot == nt, ], target))))
+  ok <- which(is.finite(per[, "EN"]))
+  if (!length(ok)) return(c(ntot = NA, n1 = NA, EN = NA, se_n1 = NA, se_EN = NA, bound = NA))
+  per[ok[which.min(per[ok, "EN"])], ]
+}
+
 #' End-to-end simulation of the seamless design (Section e2e).
 #'
 #' Stage 1 randomises n1 to each of M doses and control; the gate selects a
@@ -563,11 +619,14 @@ n1_at_target <- function(n1, pcs, target = 0.8) {
 #'   claim_opt    probability of a claim on the co-primary-optimal dose
 #'   false_claim  probability of a claim on a dose with some H_{a,k} true
 #'   EN           expected total sample size
-#'   trials       per-trial data
+#'   trials       per-trial data: selected dose, its gate statistic G, its
+#'                co-primary statistic GM = min_k Pr(p_{a*,k} > p_{C,k} | x1),
+#'                go, claim, false_claim
+#'   stats        stage-1 statistics zC and zM (nsim x M) for every dose
 run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
                       gate = c("composite", "conjunctive"), w = NULL, eta = 0,
                       nsim = 10000, alpha = 0.025, delta = NULL, alpha0 = NULL,
-                      intersection = "simes", closure = "full") {
+                      intersection = "simes", closure = "full", eta_pe = NULL) {
   gate <- match.arg(gate)
   K <- length(pC); M <- nrow(theta); A <- M + 1
   if (is.null(delta)) delta <- rep(0, K)
@@ -576,10 +635,10 @@ run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
   cellp <- config_cell_probs(pC, theta, rho)
   Y <- cell_patterns(K)
 
-  # Stage 1
+  # Stage 1 (eta_pe: optional per-endpoint futility check on the selected dose)
   x1 <- simulate_counts(cellp, n1, nsim)
   gs <- gate_stats(posterior_moments(x1, alpha0), w = w, delta = delta)
-  sd <- select_dose(if (gate == "composite") gs$zC else gs$zM, eta)
+  sd <- select_dose(if (gate == "composite") gs$zC else gs$zM, eta, zM = gs$zM, eta_pe = eta_pe)
 
   # Stage-1 per-endpoint p-values, every dose vs stage-1 control
   s1 <- array(0, c(nsim, A, K))
@@ -615,6 +674,8 @@ run_trial <- function(pC, theta, n1, n_tot = 350, rho = 0,
        claim_opt = mean(claim & sd$sel == best),
        false_claim = mean(false_claim),
        EN = A * n1 + 2 * n2 * mean(sd$go),
-       trials = data.frame(sel = sd$sel, G = sd$G, go = sd$go, claim = claim,
-                           false_claim = false_claim))
+       trials = data.frame(sel = sd$sel, G = sd$G,
+                           GM = pnorm(gs$zM[cbind(seq_len(nsim), sd$sel)]),
+                           go = sd$go, claim = claim, false_claim = false_claim),
+       stats = list(zC = gs$zC, zM = gs$zM))
 }
