@@ -56,7 +56,7 @@ where $\ind_{\cR_k}$ is the $J$-vector that indicates the cells in $\cR_k$. The 
 \end{equation}
 where $\hat p_{a,kk'}=\hat\pi_a(\cR_k\cap\cR_{k'})$ is the posterior mean of the probability that endpoints $k$ and $k'$ both succeed. We approximate the posterior of $\Delta_a$, and of each endpoint contrast $p_{a,k}-p_{0,k}$, by a normal distribution with the exact posterior mean and variance. With the weak prior the resulting posterior probabilities are numerically close to one-sided $z$-tests with plug-in variances.
 
-\paragraph{Selection and futility.}
+\subsubsection{Selection and futility}
 With a margin $\gamma$ on the composite scale and a boundary $\eta$, define
 \begin{equation}\label{eq:gate}
 G_a=\Pr\big(\Delta_a>\gamma\mid\bx\big),\qquad
@@ -66,7 +66,7 @@ The trial proceeds to stage 2 if $G_{a^\star}\ge\eta$ and stops for futility oth
 
 The composite gate can carry a \emph{per-endpoint futility check}: the trial proceeds only if also $G^{\mathrm{M}}_{a^\star}\ge\eta_{\mathrm{pe}}$ for a lenient pre-specified $\eta_{\mathrm{pe}}$. We use $\eta_{\mathrm{pe}}=0.5$. Under the normal approximation the check then stops the trial when the posterior mean of some $p_{a^\star,k}-p_{0,k}$ is below $\delta_k$. The check does not change the selected dose, and $\eta$ is calibrated with the check in place.
 
-\paragraph{Weights.}
+\subsubsection{Weights}
 The weights are fixed at the design stage. \citet{zaslavsky2013} calibrates them by a Bayesian non-inferiority argument. We calibrate them against the co-primary criterion. Let $\Theta$ be a pre-specified scenario set of effect configurations $\bm\theta=(\theta_{a,k})$. The correct dose $a^\circ(\bm\theta)$ maximises the co-primary criterion $\min_k(\theta_{a,k}-\delta_k)$, and
 \begin{equation}\label{eq:weights}
 \bw^\star=\arg\max_{\bw\in\cW}\ \frac{1}{|\Theta|}\sum_{\bm\theta\in\Theta}\Pr_{\bm\theta}\big(a^\star=a^\circ(\bm\theta)\big),
@@ -81,10 +81,10 @@ H_{a,k}:\ p_{a,k}-p_{0,k}\le\delta_k .
 \end{equation*}
 The claim for $a^\star$ states that $a^\star$ is effective on every endpoint. It rejects $H^{\cup}_{a^\star}=\bigcup_{k}H_{a^\star,k}$. A false claim is a claim for a dose with at least one true $H_{a^\star,k}$, and we require its probability to be at most $\alpha$ for all true effects. The final analysis is a closed test over the $MK$ hypotheses $H_{a,k}$. It controls the family-wise error rate over all $MK$ hypotheses, which implies the requirement.
 
-\paragraph{Stage-wise $p$-values.}
+\subsubsection{Stage-wise \texorpdfstring{$p$}{p}-values}
 Let $P^{(1)}_{a,k}$ be the one-sided $p$-value for $H_{a,k}$ from the stage-1 data of dose $a$ and control, and let $P^{(2)}_k$ be the one-sided $p$-value for $H_{a^\star,k}$ from the stage-2 data alone. We use the Wald test for a difference of proportions with unpooled variance. The Farrington--Manning score test or an exact test may replace it.
 
-\paragraph{Closed test.}
+\subsubsection{Closed test}
 For a non-empty set $B$ of dose--endpoint pairs, the intersection hypothesis $H_B=\bigcap_{(a,k)\in B}H_{a,k}$ states that every pair in $B$ is null. Its stage-1 $p$-value is
 \begin{equation}\label{eq:p1J}
 P^{(1)}_{B}=\psi_{|B|}\Big(\big(P^{(1)}_{a,k}\big)_{(a,k)\in B}\Big),
@@ -103,14 +103,14 @@ with $v_1=\sqrt{n_1/n_{\mathrm{tot}}}$ fixed at the planned sizes, so that a re-
 \end{equation}
 By the closure principle \citep{marcus1976}, $H_{a^\star,k}$ is rejected if $H_B$ is rejected for every $B$ that contains $(a^\star,k)$, and the claim is made if $H_{a^\star,k}$ is rejected for every $k$. With the adjusted $p$-value $\tilde P_k=\max_{B\ni(a^\star,k)}\cC(P^{(1)}_{B},P^{(2)}_{B})$, the claim is made if $\max_k\tilde P_k\le\alpha$. For $B=\{(a^\star,k)\}$, \eqref{eq:rejJ} is the two-stage test of endpoint $k$ for the selected dose. The larger intersections add the penalty for choosing $a^\star$ among $M$ doses and for testing $K$ endpoints.
 
-\paragraph{Computation.}
+\subsubsection{Computation}
 A pair belongs to $2^{MK-1}$ intersections, 2048 for $M=3$ and $K=4$, but the maximum in $\tilde P_k$ has a closed form. Both $\psi_m$ and $\cC$ are non-decreasing in each argument. Among the intersections with a given $B^\star\ni k$ and a given number $j$ of pairs from other doses, the largest combined $p$-value therefore takes the $j$ largest stage-1 $p$-values of the other doses. Hence
 \begin{equation}\label{eq:shortcut}
 \tilde P_k=\max_{B^\star\ni k}\ \max_{0\le j\le(M-1)K}\ \cC\Big(\psi_{|B^\star|+j}\big((P^{(1)}_{a^\star,k'})_{k'\in B^\star},\,o_{(1)},\dots,o_{(j)}\big),\ \psi_{|B^\star|}\big((P^{(2)}_{k'})_{k'\in B^\star}\big)\Big),
 \end{equation}
 where $o_{(1)}\ge o_{(2)}\ge\dots$ are the stage-1 $p$-values of the $(M-1)K$ pairs of the non-selected doses. This takes $2^{K-1}\{(M-1)K+1\}$ evaluations per endpoint, 72 in the example, and is exact.
 
-\paragraph{Two smaller closures.}
+\subsubsection{Two smaller closures}
 The full closed test protects every statement about every $H_{a,k}$, including per-endpoint statements about the selected dose. The \emph{dose-level closure} protects the co-primary claim only. It closes the hypotheses $H^\cup_a$ over doses. With $Q_a=\max_kP^{(1)}_{a,k}$, a valid $p$-value for $H^\cup_a$, the intersection $\bigcap_{a\in I}H^\cup_a$ over a set of doses $I\ni a^\star$ is rejected if $\cC\big(\psi_{|I|}(P^{(1)}_{a^\star,k},(Q_a)_{a\in I\setminus\{a^\star\}}),\,P^{(2)}_k\big)\le\alpha$ for every $k$, and the claim is made if every such intersection is rejected. This closure controls the false-claim rate for every configuration (Appendix~\ref{app:union}). It does not adjust for the $K$ endpoints of the selected dose, so it is more powerful than the full closure, and it does not control the family-wise error rate over all $MK$ hypotheses. The \emph{per-endpoint closure} closes each endpoint separately over doses, using the stage-1 $p$-values $P^{(1)}_{a,k}$ of the other doses on the same endpoint. For each $k$ it controls the probability of rejecting a true $H_{a,k}$, but it does not control the false-claim rate (Remark~\ref{rem:perendpoint}).
 
 \subsection{Error control}\label{sec:t1e}
@@ -155,10 +155,10 @@ The gate affects $N$ through $(M-1)\,n_1$, the subjects on the $M-1$ dropped arm
 
 By \eqref{eq:accounting}, the composite gate saves $(M-1)\big(n_1^{\mathrm{M}}-n_1^{\mathrm{C}}\big)$ subjects when it reaches a target probability of correct selection (PCS) at a smaller stage-1 size, where the superscripts M and C denote the co-primary (minimum over endpoints) and composite gates. Whether it does depends on two features of the effect configuration $\bm\theta$: whether the composite and the co-primary criterion rank the doses in the same order, which we call concordance, and how the differences between doses are spread across endpoints.
 
-\paragraph{Discordance.}
+\subsection{Discordance}
 Let $a^\circ=\arg\max_a\min_k(\theta_{a,k}-\delta_k)$ be the co-primary-optimal dose and $a^{\mathrm{C}}=\arg\max_a\bw^\top\bm\theta_a$ the composite-optimal dose, with $\bm\theta_a=(\theta_{a,1},\dots,\theta_{a,K})$. As $n_1\to\infty$ the composite gate selects $a^{\mathrm{C}}$ with probability tending to one (Appendix~\ref{app:bracket}). If $a^{\mathrm{C}}\ne a^\circ$ the PCS tends to zero, and a larger $n_1$ lowers it. The composite gate is therefore usable only with weights that are concordant over $\Theta$. Concordance can be checked for each configuration at the design stage but cannot be tested from the stage-1 data, so the protocol must justify it from external knowledge.
 
-\paragraph{Parallel effects.}
+\subsection{Parallel effects}
 Suppose that $\theta_{a,k}=\theta_a$ for all $k$, that $\delta_k=0$, that the weights are uniform, and that the estimates $\hat p_{a,k}$ within an arm have common variance $\sigma^2/n_1$ and common pairwise correlation $\phi$, the correlation between the binary endpoints. The composite ranking statistic is $T^{\mathrm{C}}_a=K^{-1}\sum_k(\hat p_{a,k}-\hat p_{0,k})$. For doses $a$ and $b$ the control estimate cancels, and
 \begin{equation*}
 \E\big[T^{\mathrm{C}}_a-T^{\mathrm{C}}_b\big]=\theta_a-\theta_b,\qquad
@@ -174,14 +174,14 @@ where $V_K$ is the variance of the minimum of $K$ independent standard normal va
 \end{equation}
 The lower end holds when the control term dominates the co-primary statistic and the upper end when it is absent. Since $V_K>1/K$ for $K\ge2$, the upper end is below one for $\phi<1$, and the ratio tends to one as $\phi\to1$. For $K=4$ the bracket is $[0.25,0.51]$ at $\phi=0$, $[0.40,0.67]$ at $\phi=0.19$ and $[0.56,0.80]$ at $\phi=0.41$. The bracket rests on normal approximations and equal variances, and Section~\ref{sec:selection} checks it by simulation.
 
-\paragraph{Non-parallel effects.}
+\subsection{Non-parallel effects}
 When effects differ across endpoints, the composite signal is $\bw^\top(\bm\theta_a-\bm\theta_b)$. For large $n_1$ the co-primary signal is the difference on the binding endpoints, $\theta_{a,k_a}-\theta_{b,k_b}$ with $k_a=\arg\min_k\theta_{a,k}$. If the differences between doses are spread across endpoints, the composite has the larger signal and the smaller noise. If they sit on the binding endpoint, uniform weights dilute the signal by a factor of order $1/K$ and the co-primary gate can need the smaller stage 1, whereas weights that load on that endpoint restore the composite's advantage. If the co-primary-optimal dose is optimal through a trade-off between endpoints, few weight vectors are concordant and their margin is small, and we expect the co-primary gate to do better.
 
 \section{Simulation study}\label{sec:sim}
 
 \subsection{Set-up}\label{sec:setup}
 
-\paragraph{Configurations.}
+\subsubsection{Configurations}
 We take $K=4$ and $M=3$, control success probabilities $\mathbf p_0=(0.425,0.497,0.448,0.434)$ from \citet{yang2024}, and the prior $\Dir(\mathbf 1/J)$. We test superiority, $\delta_k=0$, whereas the motivating trial tested non-inferiority. Binary endpoints are generated from a latent Gaussian threshold model with equicorrelation $\rho\in\{0,0.3,0.6\}$, which gives correlations $\phi\in\{0,0.19,0.41\}$ between endpoints at the mean control rate. Four alternative configurations (Table~\ref{tab:scen}) cover the cases of Section~\ref{sec:saving}: parallel effects (S1), effects that differ across endpoints with the two leading doses $0.01$ apart on their binding endpoint (S2), differences between doses concentrated on one endpoint (S3), and an optimal dose that is a trade-off between endpoints (S4). Five null configurations (Table~\ref{tab:nulls}) test Theorem~\ref{thm:t1e}: the global null (N0), endpoint 4 null for every dose with endpoints 1--3 as in S1 (N1), doses 1 and 2 null on every endpoint with dose 3 as in S1 (N2), and two staggered nulls in which dose $a$ is null on endpoint $a$ only and has an effect of $0.15$ (N3) or $0.25$ (N4) on the other three. In N0--N2 the doses that are not effective on every endpoint share a null endpoint. In N3 and N4 they do not.
 
 \begin{table}
@@ -196,7 +196,7 @@ We take $K=4$ and $M=3$, control success probabilities $\mathbf p_0=(0.425,0.497
 \input{tables/tab_nulls}
 \end{table}
 
-\paragraph{Gates and weights.}
+\subsubsection{Gates and weights}
 The co-primary gate ranks doses by $z^{\mathrm{M}}_a=\min_k z_{a,k}$, where $z_{a,k}$ is the posterior $z$-statistic of $p_{a,k}-p_{0,k}$, and the composite gate by the posterior $z$-statistic $z^{\mathrm{C}}_a$ of $\Delta_a$. Weights are calibrated by \eqref{eq:weights} on a simplex grid of step $0.05$, maximising the PCS at $n_1=100$ on an independent sample of $2{,}000$ trials per configuration. Configuration-specific weights $\bw^\star(\mathrm{S}j)$ take $\Theta=\{\mathrm{S}j\}$ at each $\rho$ (Table~\ref{tab:weights}). They need a designer who knows $\bm\theta$ and show the most that calibration can achieve. Jointly calibrated weights take $\Theta_{\mathrm{all}}=\{$S1, S2, S3, S4$\}$ or the concordant subset $\Theta_{\mathrm{conc}}=\{$S1, S2, S3$\}$ at $\rho=0.3$, with and without the floor $w_k\ge0.1$ that Section~\ref{sec:rule} imposes (Table~\ref{tab:wjoint}). Every weight vector is then evaluated on every configuration with $20{,}000$ trials per cell (Table~\ref{tab:cross}). Selection accuracy is measured by the PCS and by the expected regret $\E[\min_k\theta_{a^\circ,k}-\min_k\theta_{a^\star,k}]$, which counts the choice of a nearly equivalent dose as a small loss. PCS curves use $10{,}000$ trials at each of fourteen values of $n_1$ from 25 to 800, with all gates evaluated on the same stage-1 data. The $n_1$ at which the PCS reaches $0.8$ is found by linear interpolation, with a delta-method standard error.
 
 \begin{table}
@@ -205,12 +205,12 @@ The co-primary gate ranks doses by $z^{\mathrm{M}}_a=\min_k z_{a,k}$, where $z_{
 \input{tables/tab_weights}
 \end{table}
 
-\paragraph{Designs.}
+\subsubsection{Designs}
 The end-to-end study simulates each design through the interim, stage 2 and the final analysis. The co-primary design applies the co-primary gate and the composite design the composite gate. Both use the same final analysis: one-sided Wald $p$-values, the full closed test of Section~\ref{sec:final} with the Simes combination, and $\alpha=0.025$. The stage-2 size is $n_2=n_{\mathrm{tot}}-n_1$ without re-estimation. The boundary $\eta$ is calibrated for each gate, weight vector and $n_1$ so that the trial proceeds with probability $0.20$ under the global null. Five composite designs are run: uniform weights, $\bw^\star(\Theta_{\mathrm{all}})$, $\bw^\star(\Theta_{\mathrm{conc}})$, and the configuration-specific $\bw^\star(\mathrm{S3})=(1,0,0,0)$ and $\bw^\star(\mathrm{S4})=(0.20,0.20,0.10,0.50)$ in S3 and S4. Two further designs add the per-endpoint check to the uniform and to the $\bw^\star(\Theta_{\mathrm{conc}})$ composite, with $\eta$ recalibrated so that both conditions together proceed with probability $0.20$ under the global null. At $\rho=0$ the check alone proceeds in $15$\% of N0 trials, so there $\eta$ is inactive and the design is stricter than its target.
 
 Power is the probability of a claim on a dose that is effective on every endpoint. A claim on a dose with a true null endpoint is a false claim. Each alternative cell uses $10{,}000$ trials (Monte Carlo standard error at most $0.005$) and each null cell $40{,}000$ (standard error $0.0008$ for a rate near $0.025$). Designs are simulated independently, so the standard error of a difference between two designs is about $0.007$ for a probability near $0.75$.
 
-\paragraph{Runs.}
+\subsubsection{Runs}
 Run A fixes $n_1=100$ and $n_{\mathrm{tot}}=350$ in all configurations and also compares the three closures. Run B gives each design the $n_1$ at which its PCS is $0.8$, with $n_{\mathrm{tot}}=350$. Run C varies $n_1$ from 40 to 200 at $n_{\mathrm{tot}}=350$ and $\rho=0.3$. Run D treats both sizes as design parameters: every pair on the grid $n_1\in\{30,40,60,80,100,120,150,200\}$, $n_{\mathrm{tot}}\in\{350,400,450,500,600,700,800,1000\}$ is simulated at $\rho=0.3$, and each design is optimised for a target power of $0.80$, $0.85$ or $0.90$. Random number streams are fixed per cell, so the tables reproduce exactly on any number of cores.
 
 \subsection{Selection stage}\label{sec:selection}
@@ -233,6 +233,7 @@ Run A fixes $n_1=100$ and $n_{\mathrm{tot}}=350$ in all configurations and also 
 \input{tables/tab_msweep}
 \end{table}
 
+\subsubsection{Stage-1 size}
 Table~\ref{tab:main} and Figure~\ref{fig:pcs} give the stage-1 size at which each gate reaches a PCS of $0.8$. In S1 the composite gate needs 44--73\% of the co-primary stage-1 size, and the ratio lies inside the bracket \eqref{eq:bracket} at each correlation. The saving shrinks as the correlation grows, because the composite then averages less independent information. In S2 the co-primary gate does not reach the target within 800 subjects per arm. The composite pools a separation of $0.0175$ across endpoints and reaches the target at 283--618 with uniform weights and 289--546 with configuration-specific weights. In S3 uniform weights dilute the signal on endpoint 1 and the composite needs 1.8 to 4.2 times the co-primary size. Configuration-specific weights put 0.9--1.0 on endpoint 1 and bring the ratio to 0.44--0.46. In S4 uniform weights are discordant and the PCS falls as $n_1$ grows. Configuration-specific weights are concordant with a margin of about $0.01$ on the composite scale, and the composite does not reach the target within the grid, whereas the co-primary gate reaches it at 261--269. The ratio is stable in $M$ (Table~\ref{tab:msweep}, 0.56--0.61), and the saving $\Delta N=(M-1)(n_1^{\mathrm{M}}-n_1^{\mathrm{C}})$ grows with $M-1$.
 
 \begin{table}
@@ -247,6 +248,7 @@ Table~\ref{tab:main} and Figure~\ref{fig:pcs} give the stage-1 size at which eac
 \input{tables/tab_cross}
 \end{table}
 
+\subsubsection{Jointly calibrated weights}
 Tables~\ref{tab:wjoint} and~\ref{tab:cross} show what calibration achieves for a designer who does not know $\bm\theta$. On S1 and S2 every weight vector except $\bw^\star(\mathrm{S3})$ beats the co-primary gate on PCS and regret. On S3 the two jointly calibrated vectors and $\bw^\star(\mathrm{S3})$ beat it, and uniform weights, $\bw^\star(\mathrm{S4})$ and the floored $\bw^\star(\Theta_{\mathrm{all}})$ do not (PCS $0.568$, $0.506$ and $0.668$ against $0.676$). S4 is lost for every weight vector. Even $\bw^\star(\mathrm{S4})$ reaches a PCS of $0.46$ against $0.61$ for the co-primary gate, with $40$\% more regret. The composite must separate doses 2 and 3 by a margin of $0.01$ on the composite scale, and the co-primary gate separates them by $0.10$ on endpoint 4.
 
 Joint calibration over a set that contains S4 gives $\bw^\star(\Theta_{\mathrm{all}})=(0.50,0.10,0.00,0.40)$. Its mean PCS over S1--S4 is $0.651$ against $0.665$ for the co-primary gate, because its gain on S1--S3 ($0.73$ against $0.68$) does not cover its loss on S4. The floor moves this vector to $(0.40,0.10,0.10,0.40)$ at a cost of $0.006$ in mean PCS, and the floored vector loses to the co-primary gate on S3 as well as S4. Calibration over the concordant set gives $\bw^\star(\Theta_{\mathrm{conc}})=(0.50,0.20,0.10,0.20)$, which already satisfies the floor. It is concordant on S1--S3 and beats the co-primary gate on each of them on both measures (PCS $0.845$, $0.647$ and $0.733$ against $0.789$, $0.588$ and $0.676$), with a PCS of $0.26$ on S4. We call $\bw^\star(\Theta_{\mathrm{conc}})$ the rule-selected weights, because the rule of Section~\ref{sec:rule} selects it for $\Theta_{\mathrm{conc}}$ and retains the co-primary gate for $\Theta_{\mathrm{all}}$. The calibrated vectors come from $2{,}000$ trials per configuration and a grid of step $0.05$, so the difference between $\bw^\star(\Theta_{\mathrm{all}})$ and its floored version is within the resolution of the calibration. The composite gate is the better selector when the plausible configurations are concordant, and the co-primary gate when a trade-off between endpoints is plausible.
@@ -257,7 +259,7 @@ Joint calibration over a set that contains S4 gives $\bw^\star(\Theta_{\mathrm{a
 \input{tables/tab_assoc}
 \end{table}
 
-\paragraph{Agreement at the interim.}
+\subsubsection{Agreement at the interim}
 The endpoint switch requires the composite to rank the doses as the co-primary criterion would. Concordance concerns the true effects, and the stage-1 data reflect it with noise. Table~\ref{tab:assoc} measures the agreement of the two criteria on $10{,}000$ simulated stage-1 data sets per cell. Its left half reports the Pearson correlation between $z^{\mathrm{C}}_a$ and $z^{\mathrm{M}}_a$ over trials and doses, the mean Kendall $\tau$ between the two rankings of the doses within a trial, and the proportions of trials in which the two gates select the same dose and in which both select $a^\circ$. In S1--S3 the two statistics are correlated ($r=0.68$--$0.93$), $\tau$ is $0.53$--$0.80$, the two gates select the same dose in $66$--$85$\% of trials, and both select $a^\circ$ in $48$--$76$\%. The correlation also reflects the differences in true effects between doses, which both statistics follow, so $\tau$ and the same-dose proportion are the better measures. Agreement rises with the correlation between endpoints. In S3 the rule-selected weights, which load on the binding endpoint, agree better with the co-primary criterion than uniform weights ($\tau$ $0.69$--$0.75$ against $0.53$--$0.57$). In S4 the agreement is low ($\tau$ $0.07$--$0.19$, the same dose in $34$--$45$\% of trials).
 
 The right half of Table~\ref{tab:assoc} concerns the dose that the composite selects. It reports the correlation between $G$ and $G^{\mathrm{M}}$ for that dose and the area under the ROC curve (AUC) of each as a predictor of the final claim, with the AUC of the co-primary gate's statistic at its own selected dose for comparison. $G$ and $G^{\mathrm{M}}$ are moderately correlated ($r=0.20$--$0.70$ in S1--S3), because $G$ reflects the weighted average effect and $G^{\mathrm{M}}$ the weakest endpoint. In S1 and S2 the two predict the final claim equally well (AUC $0.67$--$0.77$ for $G$ and $0.69$--$0.76$ for $G^{\mathrm{M}}$, against $0.71$--$0.76$ for the co-primary gate). In S3 with uniform weights and in S4, $G^{\mathrm{M}}$ predicts better (AUC $0.75$--$0.80$ against $0.65$--$0.66$, and $0.83$--$0.88$ against $0.59$--$0.66$). The weakest endpoint is thus informative about the final claim where the composite is not, and the per-endpoint futility check uses this information.
@@ -290,8 +292,7 @@ Table~\ref{tab:closure} compares the three closures of Section~\ref{sec:final}. 
 
 \subsection{End-to-end operating characteristics}\label{sec:e2e}
 
-\paragraph{Expected sample size at equal $n_1$.}
-Both futility boundaries are calibrated to the same probability of proceeding under the global null. At equal $n_1$ the composite gate with uniform or jointly calibrated weights then proceeds at least as often as the co-primary gate under every alternative, so by \eqref{eq:EN} its $\E[N]$ is higher: at $n_1=100$ by $0$--$4$\% in S1--S3 and $2$--$11$\% in S4 (Table~\ref{tab:e2eA}), and by $6$--$23$\% in N1, N3 and N4, where one endpoint is null (Table~\ref{tab:e2eN}). At equal $n_1$ the gain of these composites is in PCS and power. The composite lowers $\E[N]$ when it is given the smaller $n_1$ it needs (runs B and D).
+The two designs can be compared at the same $n_1$ or at the $n_1$ that each needs. At the same $n_1$ the composite design does not lower the expected sample size. Both futility boundaries are calibrated to the same probability of proceeding under the global null, and under every alternative the composite gate with uniform or jointly calibrated weights then proceeds at least as often as the co-primary gate. By \eqref{eq:EN} its $\E[N]$ is higher, at $n_1=100$ by $0$--$4$\% in S1--S3, $2$--$11$\% in S4 and $6$--$23$\% in N1, N3 and N4 (Tables~\ref{tab:e2eN} and~\ref{tab:e2eA}). Its gain at equal $n_1$ is in PCS and power (run A). The composite lowers $\E[N]$ when each design is given the $n_1$ it needs for a target PCS (run B) or a target power (run D).
 
 \begin{table}
 \centering\footnotesize
@@ -299,10 +300,10 @@ Both futility boundaries are calibrated to the same probability of proceeding un
 \input{tables/tab_e2eA}
 \end{table}
 
-\paragraph{Run A: equal $n_1$.}
+\subsubsection{Run A: equal \texorpdfstring{$n_1$}{n1}}
 In S1 the uniform composite raises the PCS from $0.78$--$0.80$ to $0.82$--$0.92$ and the power from $0.64$--$0.67$ to $0.72$--$0.73$, at an $\E[N]$ higher by $1$--$2$\% (Table~\ref{tab:e2eA}). The rule-selected weights keep more than half of that gain (PCS $0.81$--$0.89$, power $0.69$--$0.70$) and $\bw^\star(\Theta_{\mathrm{all}})$ about half (PCS $0.80$--$0.86$, power $0.69$--$0.70$). In S2 every design has low power at $n_{\mathrm{tot}}=350$ ($0.37$--$0.47$). The composite's PCS is $0.62$--$0.69$ against $0.58$--$0.61$, and its power is higher by $0.01$--$0.05$. In S3 uniform weights lose on PCS and power. The rule-selected weights beat the co-primary design on both (PCS $0.70$--$0.78$ against $0.68$--$0.69$, power $0.71$--$0.75$ against $0.68$--$0.71$), by a margin that shrinks with the correlation. $\bw^\star(\Theta_{\mathrm{all}})$ is better at $\rho\le0.3$ and slightly worse at $\rho=0.6$ (PCS $0.67$--$0.75$, power $0.68$--$0.73$). The single-endpoint $\bw^\star(\mathrm{S3})$ raises the PCS to $0.83$, but it proceeds in $78$\% of trials against $95$--$99$\% for the co-primary gate, whose go decision benefits from the large effects on endpoints 2--4. Its $\E[N]$ is therefore $10$--$12$\% lower and its power $0.02$--$0.04$ lower ($0.65$--$0.67$ against $0.68$--$0.71$). In S4 the co-primary design is better on every measure. Uniform and rule-selected weights are discordant there, and the two vectors calibrated on a set containing S4 are concordant by a small margin (PCS $0.23$--$0.49$ against $0.60$--$0.63$). Power is low for every design in S4 ($0.05$--$0.22$), because the optimal dose has a binding effect of only $0.08$, and dose 3, which the composite favours, is null on endpoint 4. A claim on dose 3 is a false claim, and its rate is at most $0.003$.
 
-\paragraph{Run A: the per-endpoint check.}
+\subsubsection{Run A: the per-endpoint check}
 In N1 the co-primary gate proceeds in $55$--$71$\% of trials, the uniform composite in $86$--$98$\%, the rule-selected composite in $86$--$97$\% and $\bw^\star(\Theta_{\mathrm{all}})$ in $69$--$81$\% (Table~\ref{tab:e2eN}). The composite design thus spends the stage-2 sample more often when one endpoint is inert ($\E[N]$ of $830$--$890$ against $676$--$754$ with uniform weights). With the check the composite proceeds in $54$--$61$\% of N1 trials with uniform weights and $54$--$60$\% with rule-selected weights. Its $\E[N]$ falls to $668$--$703$, below the co-primary design's at $\rho\le0.3$ and $4$\% above it at $\rho=0.6$. In N3 and N4 the check lowers the composite's probability of proceeding from $0.94$--$1.00$ to $0.56$--$0.70$. In S4 it lowers $\E[N]$ by $16$--$25$\% ($672$--$732$ against $872$--$899$), because the composite usually selects dose 3 there, which is negative on endpoint 4. The check costs the uniform composite $0.015$--$0.030$ of power in S1 and up to $0.03$ in S2, with the larger costs at $\rho=0$, where the check is stricter than its target, and $0.01$ or less in S3 and S4. It costs the rule-selected composite at most $0.017$, and $0.007$ or less at $\rho\ge0.3$.
 
 \begin{table}
@@ -311,7 +312,7 @@ In N1 the co-primary gate proceeds in $55$--$71$\% of trials, the uniform compos
 \input{tables/tab_eta}
 \end{table}
 
-\paragraph{Futility target.}
+\subsubsection{Futility target}
 Table~\ref{tab:eta} repeats the S1, S3 and N1 cells with the probability of proceeding under N0 set to $0.10$ and $0.30$. In S1 the composite's advantage in PCS ($0.87$ against $0.79$) and power ($0.71$--$0.72$ against $0.65$--$0.67$) is the same at each target. In S3 the single-endpoint $\bw^\star(\mathrm{S3})$ proceeds in $62$\% of trials at target $0.10$ and $85$\% at $0.30$, against $94$--$99$\% for the co-primary gate. Its power moves from $0.55$ to $0.71$ and matches the co-primary design's ($0.70$) at the lenient target, with a lower $\E[N]$ ($826$ against $893$). A gate that uses one endpoint therefore needs a more lenient futility rule than the co-primary gate. In N1 the false-claim rate is $0.007$--$0.009$ at every target, and the probability of proceeding ranges from $0.48$ to $0.72$ for the co-primary gate and from $0.84$ to $0.96$ for the uniform composite.
 
 \begin{table}
@@ -320,7 +321,7 @@ Table~\ref{tab:eta} repeats the S1, S3 and N1 cells with the probability of proc
 \input{tables/tab_e2eB}
 \end{table}
 
-\paragraph{Run B: equal PCS.}
+\subsubsection{Run B: equal PCS}
 In S1, giving each design the $n_1$ at which its PCS is $0.8$ lowers the composite's $\E[N]$ by $8$--$14$\% at a power $0.01$--$0.04$ above the co-primary design (Table~\ref{tab:e2eB}). In S3 the composite with $\bw^\star(\mathrm{S3})$ reaches a PCS of $0.8$ at $n_1\approx79$--$84$. At that size the futility rule stops $28$--$29$\% of trials, and the stage-1 part of the combination test is weak. $\E[N]$ is lower by $33$--$34$\%, but power falls from $0.78$--$0.80$ to $0.60$--$0.61$. The stage-1 size also drives the futility decision and the stage-1 contribution to the final test, so $n_1$ should not be chosen from the PCS alone.
 
 \begin{table}
@@ -329,7 +330,7 @@ In S1, giving each design the $n_1$ at which its PCS is $0.8$ lowers the composi
 \input{tables/tab_e2eC}
 \end{table}
 
-\paragraph{Run C: fixed $n_{\mathrm{tot}}$.}
+\subsubsection{Run C: fixed \texorpdfstring{$n_{\mathrm{tot}}$}{ntot}}
 Table~\ref{tab:e2eC} varies $n_1$ at $n_{\mathrm{tot}}=350$. The composite's power is higher by $0.03$--$0.06$ in S1 and $0.02$--$0.06$ in S3 for $n_1\le120$, and by $0.02$ and $0.00$ at $n_1=200$. Its $\E[N]$ is slightly higher ($888$ against $881$ in S1 and $891$ against $887$ in S3 at $n_1=100$), except at $n_1=40$ in S3 ($675$ against $680$). Power levels off at $0.71$ for the co-primary design and $0.72$ for the composite in S1, and at $0.80$ for both in S3. With $n_{\mathrm{tot}}$ fixed, the power of the closed test after a correct selection is a ceiling, and a larger $n_1$ improves selection but not confirmation. Run D removes the ceiling by varying $n_{\mathrm{tot}}$.
 
 \begin{figure}
@@ -344,7 +345,7 @@ Table~\ref{tab:e2eC} varies $n_1$ at $n_{\mathrm{tot}}=350$. The composite's pow
 \input{tables/tab_e2eD}
 \end{table}
 
-\paragraph{Run D: target power.}
+\subsubsection{Run D: target power}
 Table~\ref{tab:e2eD} and Figure~\ref{fig:frontier} treat $n_1$ and $n_{\mathrm{tot}}$ as design parameters. For each $n_{\mathrm{tot}}$ on the grid, the $n_1$ at which the power reaches the target is found by linear interpolation, and the $n_{\mathrm{tot}}$ with the smallest interpolated $\E[N]$ is taken. In S1 the uniform composite reaches the three targets with $9$--$12$\% fewer expected subjects than the co-primary design ($\E[N]$ ratios $0.91$, $0.90$ and $0.88$), and the rule-selected composite with $5$--$9$\% fewer ($0.95$, $0.93$ and $0.91$). At target $0.80$ both designs choose $n_{\mathrm{tot}}=450$, and the uniform composite needs $n_1=60$ against $99$. The saving is the stage-1 saving of Section~\ref{sec:saving} less the stage-2 subjects that the composite spends on trials it does not stop. In S3 the saving is $0$--$4$\% with $\bw^\star(\mathrm{S3})$ and $1$--$4$\% with the rule-selected weights, so the selection-stage ratio of $0.44$--$0.46$ in Table~\ref{tab:main} becomes a few per cent of $\E[N]$. The standard error of a ratio is $0.01$--$0.02$, the grid step in $n_{\mathrm{tot}}$ is $50$ or $100$ subjects per arm, and the minimum over independently simulated cells is slightly optimistic for every design. We summarise the result as a saving of about $10$\% in S1 and no material saving in S3. The per-endpoint check costs one to three points of the S1 saving (ratios $0.94$, $0.92$ and $0.90$ with uniform weights, $0.96$, $0.94$ and $0.92$ with rule-selected weights) and at most one point in S3 ($0.97$, $0.98$ and $0.99$), because the checked design proceeds less often under the alternative and chooses a slightly larger $n_1$.
 
 The last four columns of Table~\ref{tab:e2eD} give $\E[N]$ under N0 and N1 for each design at its optimum, from $20{,}000$ trials per cell. Under N0 no composite with uniform or rule-selected weights costs more than the co-primary design (ratios $0.65$--$1.00$), because it proceeds with the same probability from a smaller stage 1. The single-endpoint $\bw^\star(\mathrm{S3})$ needs a larger $n_1$ and has ratios of $0.98$--$1.08$. Under N1 the composite without the check costs more than the co-primary design at every target but one, by $4$--$15$\% in S1 and $8$--$21$\% in S3, because it proceeds in $81$--$98$\% of trials against $63$--$68$\%. With the check it proceeds in $57$--$59$\% of trials and costs $7$--$20$\% less than the co-primary design (ratios $0.80$--$0.93$).
