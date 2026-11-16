@@ -15,21 +15,21 @@
 %% ---------------------------------------------------------------- panel (a)
 \node[ptitle, anchor=west] (pa) at (0,0) {(a) Trial flow};
 % stage 1 arms
-\node[arm, below=8mm of pa.west, anchor=north west, xshift=4mm] (d1) {Dose $d_1$\\ $n_1$};
-\node[arm, right=2mm of d1] (d2) {Dose $d_2$\\ $n_1$};
+\node[arm, below=8mm of pa.west, anchor=north west, xshift=4mm] (d1) {Dose 1\\ $n_1$};
+\node[arm, right=2mm of d1] (d2) {Dose 2\\ $n_1$};
 \node[right=1mm of d2, font=\small] (dots) {$\cdots$};
-\node[arm, right=1mm of dots] (dM) {Dose $d_M$\\ $n_1$};
+\node[arm, right=1mm of dots] (dM) {Dose $M$\\ $n_1$};
 \node[arm, right=2mm of dM, fill=black!12] (c1) {Control\\ $n_1$};
 \node[lab, above=0.8mm of d1.north west, anchor=south west, xshift=-1mm] {Stage 1: randomise $n_1$ subjects to each of $M+1$ arms};
 % posterior
 \node[blk, below=7mm of $(d1.south)!0.5!(c1.south)$] (post)
   {Dirichlet--multinomial posterior for each arm,\\
-   $\bpi_a\mid\bx_a^{(1)}\sim\Dir(\balpha_a+\bx_a^{(1)})$;\\
-   exact moments of $S_a(\bw)$ and of every $p_{a,k}$ (Appendix~A)};
+   $\bpi_a\mid\bx_a\sim\Dir(\bkappa_a+\bx_a)$,\\
+   exact moments of $S_a$ and of every $p_{a,k}$ (Appendix~A)};
 % composite gate
 \node[blk, below=4mm of post] (comp)
   {\textbf{Selection on the composite}\\
-   $G_a=\Pr\big(S_a-S_C>\gamma\mid\bx^{(1)}\big)$,\quad $a^\star=\arg\max_a G_a$};
+   $G_a=\Pr\big(S_a-S_0>\gamma\mid\bx\big)$,\quad $a^\star=\arg\max_a G_a$};
 \node[gate, below=4mm of comp] (dec) {$G_{a^\star}\ge\eta$?};
 \node[blk, text width=22mm, right=6mm of dec, fill=black!6] (stop) {Stop for\\ futility};
 % stage 2 arms
@@ -39,11 +39,11 @@
 % final analysis
 \node[blk, below=5mm of $(a2.south)!0.5!(c2.south)$] (fin)
   {\textbf{Confirmation on the co-primary endpoints}\\
-   closed test over all $M\times K$ dose--endpoint hypotheses $H_{a,k}$:\\
+   closed test over all $MK$ dose--endpoint hypotheses $H_{a,k}$:\\
    Simes-combined stage-1 and stage-2 $p$-values for each intersection,\\
    combined across stages by the inverse-normal rule};
 \node[blk, below=4mm of fin, fill=black!3] (claim)
-  {Claim $a^\star$ iff $H_{a^\star,k}$ is rejected for every $k=1,\dots,K$\\
+  {Claim for $a^\star$ if $H_{a^\star,k}$ is rejected for every $k=1,\dots,K$\\
    (Theorem~1 bounds the false-claim rate by $\alpha$ for every configuration)};
 % arrows
 \foreach \n in {d1,d2,dM,c1} \draw[->] (\n.south) -- ($(\n.south |- post.north)$);
@@ -63,7 +63,7 @@
 \node[ptitle, anchor=west] (pb) at (0,0) {(b) One cell-probability vector, two functionals ($K=3$)};
 \node[lab, below=4mm of pb.west, anchor=north west, text width=86mm] (btxt)
   {Each subject falls in one of $J=2^K$ response patterns. The success probability $p_{a,k}$ used for confirmation is the
-   sum of $\bpi_a$ over the cells $\cR_k$ in which component $k$ succeeds (dots in row $k$); the composite used for selection
+   sum of $\bpi_a$ over the cells $\cR_k$ in which endpoint $k$ succeeds (dots in row $k$). The composite used for selection
    is the sum with weights $c_j(\bw)=\sum_k w_k\ind_{\cR_k}(j)$, the weighted column sums of the dot rows. One posterior serves both stages, and the dependence between
    endpoints is carried by the shared cells.};
 % the J = 8 cells, ordered as j = 1 + y_1 + 2 y_2 + 4 y_3
@@ -105,9 +105,9 @@
 \coordinate (mid) at ($(c4.east)!0.5!(c5.west)$);
 \coordinate (sN) at ($(mid |- rc)+(0,-6.5mm)$);
 \node[fun, text width=60mm, anchor=north] (S) at (sN)
-  {\textbf{Selection:} $S_a(\bw)=\sum_k w_kp_{a,k}=\bc(\bw)^\top\bpi_a$\\ one scalar contrast $S_a-S_C$ per dose};
+  {\textbf{Selection:} $S_a=\sum_k w_kp_{a,k}=\bc(\bw)^\top\bpi_a$\\ one scalar contrast $S_a-S_0$ per dose};
 \node[fun, below=3.5mm of S, text width=60mm, fill=black!3] (CP)
-  {\textbf{Confirmation:} $p_{a^\star,k}-p_{C,k}>\delta_k$ for every $k$\\ (co-primary; closed test over doses and endpoints)};
+  {\textbf{Confirmation:} $p_{a^\star,k}-p_{0,k}>\delta_k$ for every $k$\\ (co-primary, closed test over doses and endpoints)};
 \draw[->] ($(mid |- rc)+(0,-2.8mm)$) -- (S.north);
 \draw[dashed] ($(c8.east |- r1)+(3mm,0)$) -- ($(c8.east |- r3)+(3mm,0)$);
 \draw[->, dashed] ($(c8.east |- r3)+(3mm,0)$) |- (CP.east);
